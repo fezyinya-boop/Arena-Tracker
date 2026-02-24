@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 import json
 
-
 PREFIX = "!"
 LEADERBOARD_FILE = "leaderboard.json"
 PENDING_FILE = "pending.json"
@@ -107,5 +106,9 @@ async def leaderboard_cmd(ctx):
         user = await bot.fetch_user(int(user_id))
         message += f"{user.name} — {stats['points']} pts (W:{stats['wins']} D:{stats['draws']} L:{stats['losses']})\n"
     await ctx.send(message)
+
+import os
+
+TOKEN = os.environ["DISCORD_TOKEN"]
 
 bot.run(TOKEN)
