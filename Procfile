@@ -1,1 +1,1 @@
-worker: python main.py
+worker: python fab_bot.py
