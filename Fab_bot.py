@@ -117,6 +117,64 @@ async def leaderboard_cmd(ctx):
         msg += f"{i}. **{stats['name']}** — {stats['points']} pts (W:{stats['wins']} L:{stats['losses']})\n"
     await ctx.send(msg)
 
+# rank and medals#
+@bot.command(name="leaderboard")
+async def leaderboard_cmd(ctx):
+    if not leaderboard:
+        return await ctx.send("❌ The leaderboard is currently empty.")
+    
+    # Sort by points
+    sorted_board = sorted(leaderboard.items(), key=lambda x: x[1]["points"], reverse=True)
+    
+    embed = discord.Embed(
+        title="🏆 GRAND ARCHIVE ARENA STANDINGS",
+        description="*Current season ranks for Ascent LA Prep*",
+        color=0x00d4ff # Neon Blue
+    )
+
+    # Top 3 get special formatting
+    for i, (uid, stats) in enumerate(sorted_board[:10], 1):
+        # Medal Logic
+        if i == 1: medal = "🥇 **CHAMPION**"
+        elif i == 2: medal = "🥈 **ELITE**"
+        elif i == 3: medal = "🥉 **CONTENDER**"
+        else: medal = f"**#{i}**"
+
+        # Using a code block inside the value makes the numbers line up perfectly
+        stats_line = f"```asc\nRating: {stats['points']} | W: {stats['wins']} L: {stats['losses']}```"
+        
+        embed.add_field(
+            name=f"{medal} — {stats.get('name', 'Unknown')}",
+            value=stats_line,
+            inline=False
+        )
+
+    embed.set_footer(text="Updates live after every reported match.")
+    embed.set_thumbnail(url="https://i.imgur.com/your-ga-logo-here.png") # Add a GA icon link here!
+    
+    await ctx.send(embed=embed)
+
+#rank#
+@bot.command(name="rank")
+async def rank(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    user_id = str(member.id)
+    
+    if user_id not in leaderboard:
+        return await ctx.send(f"🔍 {member.display_name} hasn't played any matches yet!")
+
+    stats = leaderboard[user_id]
+    
+    embed = discord.Embed(title=f"⚔️ Player Profile: {stats['name']}", color=0x7289da)
+    embed.set_thumbnail(url=member.display_url) # Shows their actual Discord profile pic
+    
+    embed.add_field(name="Current Rating", value=f"🛡️ `{stats['points']} Elo`", inline=True)
+    embed.add_field(name="Win Rate", value=f"📈 `{round((stats['wins']/(stats['wins']+stats['losses']))*100)}%`", inline=True)
+    embed.add_field(name="Record", value=f"✅ {stats['wins']} Wins\n❌ {stats['losses']} Losses\n🤝 {stats['draws']} Draws", inline=False)
+    
+    await ctx.send(embed=embed)
+
+
 # ---------- Run ----------
 TOKEN = os.environ["DISCORD_TOKEN"]
 bot.run(TOKEN)
