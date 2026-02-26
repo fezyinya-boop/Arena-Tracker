@@ -52,7 +52,7 @@ def home():
 
 def run_web():
     # Port 8080 is what Replit looks for to trigger the Webview
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=5000)
 
 def keep_alive():
     t = Thread(target=run_web)
