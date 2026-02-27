@@ -214,53 +214,54 @@ async def rank(ctx, member: discord.Member = None):
     else:
         progress_str = "\n`▰▰▰▰▰▰▰▰▰▰` **MAX RANK**"
     
-            # 1. Create the Embed - Just the Player Name
+                # 1. Embed Header (Player Name only)
     embed = discord.Embed(title=member.display_name, color=rank_info["color"])
     
-    # 2. Top Row: Tier and Rating with Extra Space
+    # 2. ROW 1: Identity & Power (Side-by-Side)
     embed.add_field(
         name="🛡️ TIER", 
-        value=f"\n{rank_info['id']} **{rank_info['name']}**", 
+        value=f"{rank_info['id']} **{rank_info['name']}**", 
         inline=True
     )
     embed.add_field(
         name="🏆 RATING", 
-        value=f"\n**{pts}** RP", 
+        value=f"**{pts}** RP", 
         inline=True
     )
     
-    # 3. Middle Row: Stats and Streak
+    # 3. ROW 2: Performance (Side-by-Side)
     win_rate = round((user_data['wins'] / (user_data['wins'] + user_data['losses'])) * 100) if (user_data['wins'] + user_data['losses']) > 0 else 0
     
     embed.add_field(
-        name="📈 STATS", 
-        value=f"\n**{user_data['wins']}W - {user_data['losses']}L**\n`{win_rate}% WR`", 
+        name="⚔️ RECORD", 
+        value=f"**{user_data['wins']}W - {user_data['losses']}L**\n`{win_rate}% WR`", 
         inline=True
     )
     embed.add_field(
         name="🔥 STREAK", 
-        value=f"\n**{user_data.get('streak', 0)}** Wins", 
+        value=f"**{user_data.get('streak', 0)}** Wins", 
         inline=True
     )
     
-    # 4. Bottom Row: Progress Bar (No emojis, just text)
+    # 4. ROW 3: The Progress Bar (Full Width)
     if next_rank:
-        # Clean bar with no extra icons
-        progress_display = f"**{bar}** {int((current_progress/total_needed)*100)}% to **{next_rank['name']}**"
+        # Spacing with \n to separate from the stats above
+        progress_display = f"\n{bar}  {int((current_progress/total_needed)*100)}% to **{next_rank['name']}**"
     else:
-        progress_display = "`▰▰▰▰▰▰▰▰▰▰` **MAX RANK**"
+        progress_display = f"\n`▰▰▰▰▰▰▰▰▰▰` **MAX RANK**"
 
     embed.add_field(
         name="🚀 RANK PROGRESS", 
-        value=f"\n{progress_display}", 
+        value=progress_display, 
         inline=False
     )
 
-    # 5. Visuals & Footer
+    # 5. Visuals & Branding
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="Archive Arena", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
+    embed.set_footer(text="Archive Arena | Ascent LA 2026", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
 
     await ctx.send(embed=embed)
+
 
 
 
