@@ -184,16 +184,43 @@ async def rank(ctx, member: discord.Member = None):
     uid = str(member.id)
     
     if uid not in leaderboard:
-        return await ctx.send(f"❌ No record for {member.display_name}.")
+        return await ctx.send("❌ No data found.")
 
     data = leaderboard[uid]
-    streak_emoji = " 🔥" if data.get('streak', 0) >= 3 else ""
+    pts = data['points']
+    rank_info = get_rank_info(pts)
     
-    embed = discord.Embed(title=f"PLAYER PROFILE{streak_emoji}", color=0xd4af37)
-    embed.add_field(name="🏆 RATING", value=f"`{data['points']}`", inline=True)
-    embed.add_field(name="🔥 STREAK", value=f"`{data.get('streak', 0)} Wins`", inline=True)
-    # ... keep the rest of your embed fields ...
+    # Calculate progress to next rank
+    next_rank = next((r for r in reversed(RANKS) if r['min'] > pts), None)
+    if next_rank:
+        total_needed = next_rank['min'] - rank_info['min']
+        current_progress = pts - rank_info['min']
+        percent = min(max(int((current_progress / total_needed) * 10), 0), 10)
+        bar = "▰" * percent + "▱" * (10 - percent)
+        progress_str = f"\n`{bar}` {int((current_progress/total_needed)*100)}% to {next_rank['name']}"
+    else:
+        progress_str = "\n`▰▰▰▰▰▰▰▰▰▰` **MAX RANK**"
+
+    embed = discord.Embed(title=f"ARCHIVE ARENA | {member.display_name}", color=rank_info["color"])
+    
+    # Field 1: Tier & RP
+    embed.add_field(name="🛡️ TIER", value=f"{rank_info['id']} **{rank_info['name']}**", inline=True)
+    embed.add_field(name="🏆 RATING", value=f"**{pts}** RP", inline=True)
+    
+    # Field 2: Record & Streak
+    win_rate = round((data['wins'] / (data['wins'] + data['losses'])) * 100) if (data['wins'] + data['losses']) > 0 else 0
+    embed.add_field(name="📈 STATS", value=f"**{data['wins']}**W - **{data['losses']}**L\n`{win_rate}% Win Rate`", inline=True)
+    embed.add_field(name="🔥 STREAK", value=f"**{data.get('streak', 0)}** Wins", inline=True)
+    
+    # Progress Bar
+    embed.add_field(name="🚀 RANK PROGRESS", value=progress_str, inline=False)
+
+    # Images
+    embed.set_thumbnail(url=member.display_avatar.url) # Or use your Rank Emblem URL here!
+    embed.set_footer(text="Ascent LA 2026", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
+
     await ctx.send(embed=embed)
+
 
 
 @bot.command()
