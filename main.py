@@ -35,6 +35,48 @@ def get_rank_info(points):
         if points >= rank["min"]: return rank
     return RANKS[-1]
 
+
+async def update_live_leaderboard(guild):
+    channel = guild.get_channel(LEADERBOARD_CHANNEL_ID)
+    if not channel: return
+
+    # Sort players by points
+    top_10 = sorted(leaderboard.items(), key=lambda x: x[1]['points'], reverse=True)[:10]
+    
+    embed = discord.Embed(title="🏆 ARCHIVE ARENA TOP 10", color=0xd4af37)
+    
+    description = ""
+    for i, (uid, data) in enumerate(top_10, 1):
+        rank_info = get_rank_info(data['points'])
+        streak = f"🔥{data.get('streak', 0)}" if data.get('streak', 0) >= 3 else ""
+        description += f"{i}. {rank_info['id']} **{data['name']}** - `{data['points']} RP` {streak}\n"
+    
+    embed.description = description
+    embed.set_footer(text="Updates automatically after every match.")
+
+    # Try to edit existing message, otherwise send new one
+    try:
+        msg = await channel.fetch_message(LEADERBOARD_MSG_ID)
+        await msg.edit(embed=embed)
+    except:
+        new_msg = await channel.send(embed=embed)
+        # Record this new_msg.id in your code/file so it can edit it next time!
+
+
+async def update_player_role(member, points):
+    rank_info = get_rank_info(points)
+    # Find the role in the server that matches the Rank Name
+    role = discord.utils.get(member.guild.roles, name=rank_info['name'])
+    
+    if role and role not in member.roles:
+        # Remove old rank roles first
+        all_rank_names = [r['name'] for r in RANKS]
+        roles_to_remove = [r for r in member.roles if r.name in all_rank_names]
+        await member.remove_roles(*roles_to_remove)
+        
+        # Add new rank role
+        await member.add_roles(role)
+
 # --- MATCH VERIFICATION VIEW ---
 class ReportView(discord.ui.View):
     def __init__(self, winner, loser):
