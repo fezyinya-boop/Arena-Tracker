@@ -290,16 +290,41 @@ async def leaderboard_cmd(ctx):
     await ctx.send(embed=embed)
 
 #rank#
-
-@bot.command(name="rank")
+@bot.command()
 async def rank(ctx, member: discord.Member = None):
     member = member or ctx.author
-    user_id = str(member.id)
+    uid = str(member.id)
     
-    if user_id not in leaderboard:
-        return await ctx.send(f"🔍 **{member.display_name}** hasn't recorded any matches in the Arena yet!")
+    if uid not in leaderboard:
+        await ctx.send(f"❌ {member.display_name} has not played any matches yet.")
+        return
 
-    stats = leaderboard[user_id]
+    stats = leaderboard[uid]
+    total = stats['wins'] + stats['losses']
+    wr = round((stats['wins'] / total) * 100) if total > 0 else 0
+    
+    # Determine Tier based on Points
+    tier = "VETERAN"
+    color = 0x808080
+    if stats['points'] >= 1200:
+        tier = "CHAMPION"
+        color = 0xd4af37 # Gold
+    elif stats['points'] >= 1100:
+        tier = "ELITE"
+        color = 0x00d4ff # Magic Blue
+
+    embed = discord.Embed(title="PLAYER PROFILE", color=color)
+    embed.set_author(name=f"Archive Arena | {tier}", icon_url=bot.user.avatar.url)
+    embed.set_thumbnail(url=member.avatar.url) # Shows player's PFP
+    
+    embed.add_field(name="🏆 RATING", value=f"**{stats['points']}**", inline=True)
+    embed.add_field(name="📊 WIN RATE", value=f"{wr}%", inline=True)
+    embed.add_field(name="⚔️ RECORD", value=f"{stats['wins']}W - {stats['losses']}L", inline=False)
+    
+    embed.set_footer(text="Ascent LA 2026 • Grand Archive TCG")
+    
+    await ctx.send(embed=embed)
+
     
     # Safety Math for Win Rate
     total_games = stats['wins'] + stats['losses']
