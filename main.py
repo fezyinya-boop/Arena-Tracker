@@ -21,41 +21,90 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# --- Match Verification System ---
+# --- RANK & STREAK CONFIG ---
+RANKS = [
+    {"name": "💎 DIAMOND", "min": 1800, "color": 0x00ffff},
+    {"name": "📀 PLATINUM", "min": 1600, "color": 0xe5e4e2},
+    {"name": "🟡 GOLD", "min": 1400, "color": 0xffd700},
+    {"name": "⚪ SILVER", "min": 1200, "color": 0xc0c0c0},
+    {"name": "🟤 BRONZE", "min": 0, "color": 0xcd7f32}
+]
+
+def get_rank_info(points):
+    for rank in RANKS:
+        if points >= rank["min"]: return rank
+    return RANKS[-1]
+
+# --- MATCH VERIFICATION VIEW ---
 class ReportView(discord.ui.View):
     def __init__(self, winner, loser):
-        super().__init__(timeout=600) # 10 minute window
+        super().__init__(timeout=600) # 10 Minute Auto-Forfeit Timer
         self.winner = winner
         self.loser = loser
+
+    async def on_timeout(self):
+        # If the loser ignores the button for 10 mins, it auto-confirms
+        await self.process_match(is_timeout=True)
 
     @discord.ui.button(label="Confirm Win", style=discord.ButtonStyle.success, emoji="⚔️")
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.loser.id:
-            await interaction.response.send_message("❌ Only the opponent can verify this result.", ephemeral=True)
-            return
+            return await interaction.response.send_message("❌ Only the loser can confirm this.", ephemeral=True)
+        await self.process_match(interaction=interaction)
 
-        # Initialize players
+    async def process_match(self, interaction=None, is_timeout=False):
         w_id, l_id = str(self.winner.id), str(self.loser.id)
+        
+        # Ensure players exist in data
         for uid, mem in [(w_id, self.winner), (l_id, self.loser)]:
-            leaderboard.setdefault(uid, {"name": mem.display_name, "points": 1000, "wins": 0, "losses": 0})
+            leaderboard.setdefault(uid, {"name": mem.display_name, "points": 1000, "wins": 0, "losses": 0, "streak": 0})
+
+        # Calculate Rank Before Match
+        old_rank = get_rank_info(leaderboard[w_id]['points'])
 
         # Elo Math
         r1, r2 = leaderboard[w_id]['points'], leaderboard[l_id]['points']
-        k, expected = 32, 1 / (1 + 10 ** ((r2 - r1) / 400))
-        pts = round(k * (1 - expected))
+        pts = round(32 * (1 - (1 / (1 + 10 ** ((r2 - r1) / 400)))))
 
-        # Update
+        # Update Stats
         leaderboard[w_id]['points'] += pts
         leaderboard[l_id]['points'] -= pts
         leaderboard[w_id]['wins'] += 1
         leaderboard[l_id]['losses'] += 1
+        leaderboard[w_id]['streak'] += 1
+        leaderboard[l_id]['streak'] = 0 
         save_data()
 
-        embed = discord.Embed(title="⚔️ MATCH VERIFIED", color=0xd4af37)
-        embed.description = f"**{self.winner.display_name}** defeated **{self.loser.display_name}**\n\nGain: `+{pts}` RP | Loss: `-{pts}` RP"
-        embed.set_thumbnail(url=self.winner.display_avatar.url)
+        # Check for Rank Up
+        new_rank = get_rank_info(leaderboard[w_id]['points'])
+        rank_up_msg = f"\n🆙 **RANK UP:** {self.winner.mention} ascended to **{new_rank['name']}**!" if new_rank['name'] != old_rank['name'] else ""
+
+        # Build Embed
+        title = "⚔️ MATCH VERIFIED" if not is_timeout else "⏰ AUTO-VERIFIED (TIMEOUT)"
+        streak_msg = f"\n🔥 **On a {leaderboard[w_id]['streak']} win streak!**" if leaderboard[w_id]['streak'] >= 3 else ""
         
-        await interaction.response.edit_message(embed=embed, view=None)
+        embed = discord.Embed(title=title, color=new_rank["color"])
+        embed.description = f"**{self.winner.display_name}** defeated **{self.loser.display_name}**\n`+{pts}` RP / `-{pts}` RP{streak_msg}{rank_up_msg}"
+        
+        if interaction:
+            await interaction.response.edit_message(embed=embed, view=None)
+        else:
+            # This handles the auto-timeout edit
+            pass # You'd need a reference to the message here if you want to edit it on timeout
+
+@bot.command()
+async def report(ctx, opponent: discord.Member):
+    if opponent == ctx.author:
+        return await ctx.send("❌ You can't report a win against yourself.")
+    
+    view = ReportView(winner=ctx.author, loser=opponent)
+    embed = discord.Embed(
+        title="📝 Match Pending Verification",
+        description=f"{opponent.mention}, **{ctx.author.display_name}** claims they won.\nClick the button below to confirm. (Expires in 10 mins)",
+        color=0x7289da
+    )
+    await ctx.send(embed=embed, view=view)
+
 
 # --- Commands ---
 
