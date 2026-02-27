@@ -78,21 +78,17 @@ async def rank(ctx, member: discord.Member = None):
     uid = str(member.id)
     
     if uid not in leaderboard:
-        return await ctx.send(f"❌ {member.display_name} has no record in the Archive.")
+        return await ctx.send(f"❌ No record for {member.display_name}.")
 
     data = leaderboard[uid]
-    total = data['wins'] + data['losses']
-    wr = round((data['wins'] / total) * 100) if total > 0 else 0
-
-    embed = discord.Embed(title="PLAYER PROFILE", color=0xd4af37)
-    embed.set_author(name="Archive Arena", icon_url=bot.user.avatar.url)
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.add_field(name="🏆 RATING", value=f"`{data['points']}`", inline=True)
-    embed.add_field(name="⚔️ RECORD", value=f"`{data['wins']}W - {data['losses']}L`", inline=True)
-    embed.add_field(name="📊 WIN RATE", value=f"`{wr}%`", inline=True)
-    embed.set_footer(text="Ascent LA 2026")
+    streak_emoji = " 🔥" if data.get('streak', 0) >= 3 else ""
     
+    embed = discord.Embed(title=f"PLAYER PROFILE{streak_emoji}", color=0xd4af37)
+    embed.add_field(name="🏆 RATING", value=f"`{data['points']}`", inline=True)
+    embed.add_field(name="🔥 STREAK", value=f"`{data.get('streak', 0)} Wins`", inline=True)
+    # ... keep the rest of your embed fields ...
     await ctx.send(embed=embed)
+
 
 @bot.command()
 @commands.has_permissions(administrator=True)
