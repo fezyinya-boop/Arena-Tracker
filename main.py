@@ -259,7 +259,7 @@ async def rank(ctx, member: discord.Member = None):
 
     # 5. Visuals
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="Ascent LA 2026", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
+    embed.set_footer(text="Archive Arena", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
 
     await ctx.send(embed=embed)
 
