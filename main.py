@@ -214,11 +214,10 @@ async def rank(ctx, member: discord.Member = None):
     else:
         progress_str = "\n`▰▰▰▰▰▰▰▰▰▰` **MAX RANK**"
     
-        # 1. Create the Embed - Title is just the player's name
+            # 1. Create the Embed - Just the Player Name
     embed = discord.Embed(title=member.display_name, color=rank_info["color"])
     
-    # 2. Top Row: Tier and Rating
-    # \u200b is an invisible character used to force space if needed
+    # 2. Top Row: Tier and Rating with Extra Space
     embed.add_field(
         name="🛡️ TIER", 
         value=f"\n{rank_info['id']} **{rank_info['name']}**", 
@@ -235,7 +234,7 @@ async def rank(ctx, member: discord.Member = None):
     
     embed.add_field(
         name="📈 STATS", 
-        value=f"\n**{user_data['wins']}W - {user_data['losses']}L**\n`{win_rate}% Win Rate`", 
+        value=f"\n**{user_data['wins']}W - {user_data['losses']}L**\n`{win_rate}% WR`", 
         inline=True
     )
     embed.add_field(
@@ -244,12 +243,12 @@ async def rank(ctx, member: discord.Member = None):
         inline=True
     )
     
-    # 4. Bottom Row: Rank Progress (Clean Text Version)
+    # 4. Bottom Row: Progress Bar (No emojis, just text)
     if next_rank:
-        # progress_str logic from before, but removing the emoji circle
-        progress_display = f"{bar} {int((current_progress/total_needed)*100)}% to {next_rank['name']}"
+        # Clean bar with no extra icons
+        progress_display = f"**{bar}** {int((current_progress/total_needed)*100)}% to **{next_rank['name']}**"
     else:
-        progress_display = "`▰▰▰▰▰▰▰▰▰▰` **MAX RANK ACHIEVED**"
+        progress_display = "`▰▰▰▰▰▰▰▰▰▰` **MAX RANK**"
 
     embed.add_field(
         name="🚀 RANK PROGRESS", 
@@ -257,11 +256,12 @@ async def rank(ctx, member: discord.Member = None):
         inline=False
     )
 
-    # 5. Visuals
+    # 5. Visuals & Footer
     embed.set_thumbnail(url=member.display_avatar.url)
     embed.set_footer(text="Archive Arena", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
 
     await ctx.send(embed=embed)
+
 
 
 
