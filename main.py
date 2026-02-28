@@ -76,7 +76,7 @@ async def refresh_leaderboard(guild):
     top = c.fetchall()
     conn.close()
 
-    embed = discord.Embed(title="🏆 ARCHIVE ARENA TOP 10", color=0xd4af37)
+    embed = discord.Embed(title="🏆 ARCHIVE ARENA - TOP 10 🏆", color=0xd4af37)
     desc = ""
     for i, (name, pts, streak) in enumerate(top, 1):
         fire = f"🔥{streak}" if streak >= 3 else ""
@@ -97,6 +97,10 @@ class MatchReportingView(discord.ui.View):
         super().__init__(timeout=1800) # 30 Minute Forfeit Timer
         self.p1, self.p2 = p1, p2
         self.reports = {p1.id: None, p2.id: None}
+        
+        # Update button labels to use Display Names
+        self.report_p1.label = f"{p1.display_name} Won"
+        self.report_p2.label = f"{p2.display_name} Won"
 
     async def finalize(self, interaction, winner_id):
         w_mem = self.p1 if winner_id == self.p1.id else self.p2
@@ -119,26 +123,39 @@ class MatchReportingView(discord.ui.View):
         await update_player_role(l_mem, r2 - pts)
         await refresh_leaderboard(interaction.guild)
 
-        embed = discord.Embed(title="⚔️ MATCH VERIFIED", color=0x2ecc71)
-        embed.description = f"**{w_mem.display_name}** defeated **{l_mem.display_name}**\n`+{pts}` RP / `-{pts}` RP"
-        embed.set_footer(text="Arena Tracker")
+        # UI RESTORATION: The "Pro" Embed Style
+        rank_info = get_rank_info(r1 + pts)
+        embed = discord.Embed(title="⚔️ MATCH VERIFIED", color=rank_info["color"])
+        
+        streak_msg = f"\n🔥 **On a {w_data[5]+1} win streak!**" if w_data[5]+1 >= 3 else ""
+        
+        embed.description = f"**{w_mem.display_name}** defeated **{l_mem.display_name}**"
+        embed.add_field(name="RESULTS", value=f"📈 **{w_mem.display_name}**: `+{pts} RP`\n📉 **{l_mem.display_name}**: `-{pts} RP`{streak_msg}", inline=False)
+        
+        embed.set_footer(text="Arena Tracker • Match Finalized")
         await interaction.response.edit_message(content=None, embed=embed, view=None)
 
-    @discord.ui.button(label="I Won", style=discord.ButtonStyle.success, emoji="⚔️")
-    async def report_win(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="Player A Won", style=discord.ButtonStyle.success, emoji="⚔️")
+    async def report_p1(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id not in [self.p1.id, self.p2.id]: return
-        self.reports[interaction.user.id] = interaction.user.id
+        self.reports[interaction.user.id] = self.p1.id
+        await self.check_reports(interaction)
+
+    @discord.ui.button(label="Player B Won", style=discord.ButtonStyle.success, emoji="⚔️")
+    async def report_p2(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id not in [self.p1.id, self.p2.id]: return
+        self.reports[interaction.user.id] = self.p2.id
         await self.check_reports(interaction)
 
     async def check_reports(self, interaction):
         p1_rep, p2_rep = self.reports[self.p1.id], self.reports[self.p2.id]
         if p1_rep and p2_rep:
             if p1_rep != p2_rep:
-                await interaction.response.edit_message(content="⚠️ **DISPUTE!** Both claimed victory. Pinging @Moderator.", view=None)
+                await interaction.response.edit_message(content=f"⚠️ **DISPUTE!** {self.p1.display_name} and {self.p2.display_name} reported different winners. Pinging @Moderator.", view=None)
             else:
                 await self.finalize(interaction, p1_rep)
         else:
-            await interaction.response.edit_message(content=f"⏳ {interaction.user.name} reported victory. Opponent has 30m to report or forfeit.")
+            await interaction.response.edit_message(content=f"⏳ **{interaction.user.display_name}** reported. Waiting for opponent to verify (30m remains)...")
 
 class ChallengeView(discord.ui.View):
     def __init__(self, p1, p2):
@@ -148,7 +165,14 @@ class ChallengeView(discord.ui.View):
     @discord.ui.button(label="Accept Match", style=discord.ButtonStyle.success)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.p2.id: return
-        await interaction.response.edit_message(content="⚔️ Match Active! Report once finished.", view=MatchReportingView(self.p1, self.p2))
+        
+        embed = discord.Embed(
+            title="⚔️ MATCH ACTIVE",
+            description=f"Match started between **{self.p1.display_name}** and **{self.p2.display_name}**.\n\nOnce finished, **both** players must report the winner below.",
+            color=0x3498db
+        )
+        embed.set_footer(text="Arena Tracker • Reporting Phase")
+        await interaction.response.edit_message(content=None, embed=embed, view=MatchReportingView(self.p1, self.p2))
 
 # --- Commands ---
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
@@ -162,7 +186,14 @@ async def on_ready():
 async def report(ctx, opponent: discord.Member):
     if opponent == ctx.author: return
     view = ChallengeView(ctx.author, opponent)
-    await ctx.send(f"{opponent.mention}, **{ctx.author.name}** challenged you! Do you accept?", view=view)
+    
+    embed = discord.Embed(
+        title="📝 CHALLENGE ISSUED",
+        description=f"{opponent.mention}, **{ctx.author.display_name}** has challenged you to a match!\n\nDo you accept?",
+        color=0x7289da
+    )
+    embed.set_footer(text="Arena Tracker")
+    await ctx.send(embed=embed, view=view)
 
 @bot.command()
 async def rank(ctx, member: discord.Member = None):
@@ -171,7 +202,6 @@ async def rank(ctx, member: discord.Member = None):
     pts = data[2]
     r_info = get_rank_info(pts)
     
-    # Progress Bar Logic
     next_rank = next((r for r in reversed(RANKS) if r['min'] > pts), None)
     if next_rank:
         total_needed = next_rank['min'] - r_info['min']
@@ -199,17 +229,16 @@ async def history(ctx, member: discord.Member = None):
     member = member or ctx.author
     data = get_or_create_user(member.id, member.display_name)
     hist = data[6].split(",") if data[6] else []
-    if not hist: return await ctx.send(f"No match history for {member.name}.")
+    if not hist: return await ctx.send(f"No match history for {member.display_name}.")
     
     display = "\n".join([f"`{i+1}.` {'🟩 WIN' if r == 'W' else '🟥 LOSS'}" for i, r in enumerate(reversed(hist))])
-    embed = discord.Embed(title=f"📜 {member.name}'s History", description=display, color=0x3498db)
+    embed = discord.Embed(title=f"📜 {member.display_name}'s History", description=display, color=0x3498db)
     embed.set_footer(text="Arena Tracker")
     await ctx.send(embed=embed)
 
 @bot.command()
 @commands.has_permissions(manage_messages=True)
 async def settle(ctx, winner: discord.Member, loser: discord.Member):
-    """Judge Override to settle disputes."""
     w_data = get_or_create_user(winner.id, winner.display_name)
     l_data = get_or_create_user(loser.id, loser.display_name)
     r1, r2 = w_data[2], l_data[2]
@@ -225,6 +254,10 @@ async def settle(ctx, winner: discord.Member, loser: discord.Member):
     await update_player_role(winner, r1+pts)
     await update_player_role(loser, r2-pts)
     await refresh_leaderboard(ctx.guild)
-    await ctx.send(f"⚖️ **Verdict:** {winner.mention} awarded victory. (+{pts} RP)")
+    
+    embed = discord.Embed(title="⚖️ JUDGE VERDICT", color=0xe74c3c)
+    embed.description = f"**{winner.display_name}** awarded victory over **{loser.display_name}**."
+    embed.add_field(name="RP SHIFT", value=f"📈 {winner.display_name}: `+{pts}`\n📉 {loser.display_name}: `-{pts}`")
+    await ctx.send(embed=embed)
 
 bot.run(TOKEN)
