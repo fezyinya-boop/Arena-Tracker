@@ -191,6 +191,11 @@ async def on_ready():
 @bot.command()
 async def rules(ctx):
     """Displays the official Archive Arena rules and ranking system."""
+    # Build the Rank strings dynamically from the RANKS list
+    rank_summary = ""
+    for r in RANKS:
+        rank_summary += f"• {r['name']}: {r['min']}+ RP\n"
+
     embed = discord.Embed(
         title="🛡️ ARCHIVE ARENA OFFICIAL RULES",
         description=(
@@ -200,30 +205,26 @@ async def rules(ctx):
             "Both players must report the outcome immediately after a match. "
             "Intentional false reporting will result in a rank reset or ban.\n\n"
             "**2. Disputes**\n"
-            "If a dispute occurs, the automated system pauses. Post a screenshot or screen recording of your "
-            "match in this channel and wait for a Moderator to settle it, if its a screenshot it must be of the end game state.\n\n"
+            "If a dispute occurs, the automated system pauses. Post a screenshot of your "
+            "victory in this channel and wait for a moderator to settle it.\n\n"
             "**3. Sportsmanship**\n"
             "Toxic behavior, stalling, or 'counter-picking' outside of allowed "
             "parameters is prohibited.\n\n"
+            
         ),
         color=0x7289da
     )
     
-    # Adding a field for the RP breakdown
     embed.add_field(
         name="📊 RANKING SYSTEM",
-        value=(
-            "• 💎 **DIAMOND**: 1800+ RP\n"
-            "• 📀 **PLATINUM**: 1600+ RP\n"
-            "• 🟡 **GOLD**: 1400+ RP\n"
-            "• ⚪ **SILVER**: 1200+ RP\n"
-            "• <:rookie:1476994147935322265> **BRONZE**: 0-1199 RP"
-        ),
+        value=rank_summary,
         inline=False
     )
     
-    embed.set_footer(text="Arena Tracker • Play Fair, Duel Hard")
+    embed.set_footer(text="Play Fair, Duel Hard")
     await ctx.send(embed=embed)
+
+
     
 
 @bot.command(aliases=['challenge'])
