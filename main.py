@@ -19,8 +19,8 @@ RANKS = [
     {"name": "💎 DIAMOND", "min": 1800, "color": 0x00ffff},
     {"name": "📀 PLATINUM", "min": 1600, "color": 0xe5e4e2},
     {"name": "🟡 GOLD", "min": 1400, "color": 0xffd700},
-    {"name": "<:rookie:1476994147935322265> SILVER", "min": 1200, "color": 0xc0c0c0},
-    {"name": "🟤 BRONZE", "min": 0, "color": 0xcd7f32}
+    {"name": "😭 SILVER", "min": 1200, "color": 0xc0c0c0},
+    {"name": "<:rookie:1476994147935322265> BRONZE", "min": 0, "color": 0xcd7f32}
 ]
 
 # --- Database Setup ---
