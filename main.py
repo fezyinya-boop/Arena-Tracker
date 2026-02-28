@@ -81,6 +81,28 @@ async def update_player_role(member, points):
         
         await member.remove_roles(*to_remove)
         await member.add_roles(role)
+
+@bot.command()
+async def ranks(ctx):
+    """Displays the RP requirements and custom icons for all ranks."""
+    embed = discord.Embed(
+        title="📊 ARCHIVE ARENA RANKING TIERS",
+        description="Earn RP by winning duels to climb the ladder!",
+        color=0xffffff  # Neutral white for the full list
+    )
+
+    # We build the list from highest to lowest
+    rank_list = ""
+    for r in RANKS:
+        rank_list += f"{r['name']} — **{r['min']}+ RP**\n"
+
+    embed.add_field(name="Current Tiers", value=rank_list, inline=False)
+    
+    # Adding a little tip at the bottom
+    embed.set_footer(text="Higher ranks earn more prestige in the Leaderboard!")
+    
+    await ctx.send(embed=embed)
+    
         
 
 async def update_leaderboard():
