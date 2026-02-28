@@ -229,7 +229,7 @@ async def rank(ctx, member: discord.Member = None):
     embed.add_field(name="🚀 RANK PROGRESS", value=f"\n{bar} {int((current_progress/total_needed)*100)}% to {next_rank['name']}", inline=False)
 
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="Arena Keeper")
+    embed.set_footer(text="Arena Tracker")
 
     await ctx.send(embed=embed)
 
