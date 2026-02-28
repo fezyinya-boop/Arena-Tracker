@@ -200,14 +200,11 @@ async def rules(ctx):
             "Both players must report the outcome immediately after a match. "
             "Intentional false reporting will result in a rank reset or ban.\n\n"
             "**2. Disputes**\n"
-            "If a dispute occurs, the automated system pauses. Post a screenshot of your "
-            "victory in this channel and wait for a <@&{MOD_ROLE_ID}> to settle it.\n\n"
+            "If a dispute occurs, the automated system pauses. Post a screenshot or screen recording of your "
+            "match in this channel and wait for a Moderator to settle it, if its a screenshot it must be of the end game state.\n\n"
             "**3. Sportsmanship**\n"
             "Toxic behavior, stalling, or 'counter-picking' outside of allowed "
             "parameters is prohibited.\n\n"
-            "**4. Rank Decay & Smurfing**\n"
-            "Alt accounts are not permitted on the leaderboard. Play on your main "
-            "to keep the rankings accurate."
         ),
         color=0x7289da
     )
