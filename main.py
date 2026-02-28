@@ -389,6 +389,79 @@ async def tourney_reward(ctx, first: discord.Member, second: discord.Member, thi
     embed.set_footer(text="Dispute Resolved") # Using your requested footer style
     await ctx.send(embed=embed)
     await refresh_leaderboard(ctx.guild)
+
+# --- Tournament Management Block ---
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def tourney_add(ctx, member: discord.Member):
+    """Manually forces a player into the tournament roster."""
+    global tournament_players, tournament_active
+    if not tournament_active:
+        return await ctx.send("❌ No tournament is currently open. Use `!tourney_open` first.")
+    
+    if tournament_bracket:
+        return await ctx.send("❌ The bracket is already live! You can't add players mid-tournament.")
+
+    if member in tournament_players:
+        return await ctx.send(f"⚠️ {member.display_name} is already on the list.")
+
+    tournament_players.append(member)
+    await ctx.send(f"✅ **{member.display_name}** has been manually added to the roster.")
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def tourney_kick(ctx, member: discord.Member):
+    """Removes a specific player from the registration list."""
+    global tournament_players
+    if tournament_bracket:
+        return await ctx.send("❌ The bracket has already started! Use `!settle` if you need to forfeit someone.")
+
+    if member in tournament_players:
+        tournament_players.remove(member)
+        await ctx.send(f"✅ **{member.display_name}** has been removed from the tournament roster.")
+    else:
+        await ctx.send(f"❌ {member.display_name} isn't in the tournament list.")
+
+@bot.command()
+async def tourney_list(ctx):
+    """Shows all players currently signed up."""
+    if not tournament_active:
+        return await ctx.send("No tournament is currently active.")
+    
+    if not tournament_players:
+        return await ctx.send("The tournament is open, but no one has joined yet.")
+
+    player_list = "\n".join([f"• {p.display_name}" for p in tournament_players])
+    embed = discord.Embed(
+        title="📝 CURRENT ROSTER",
+        description=player_list,
+        color=0x3498db
+    )
+    embed.set_footer(text="Last 10 Matches")
+    await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def tourney_end(ctx):
+    """Kills the current tournament session and wipes all data."""
+    global tournament_players, tournament_active, tournament_bracket
+    
+    if not tournament_active:
+        return await ctx.send("There is no active tournament to end.")
+
+    tournament_players = []
+    tournament_bracket = []
+    tournament_active = False
+    
+    embed = discord.Embed(
+        title="🏁 TOURNAMENT CONCLUDED",
+        description="The tournament session has been killed. All registration data and brackets have been wiped.",
+        color=0x95a5a6
+    )
+    embed.set_footer(text="Dispute Resolved")
+    await ctx.send(embed=embed)
+    
     
 
 bot.run(TOKEN)
