@@ -83,28 +83,50 @@ async def update_player_role(member, points):
         await member.add_roles(role)
         
 
-async def refresh_leaderboard(guild):
-    channel = guild.get_channel(LEADERBOARD_CHANNEL_ID)
-    if not channel: return
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT name, points, streak FROM users ORDER BY points DESC LIMIT 10")
-    top = c.fetchall()
-    conn.close()
+async def update_leaderboard():
+    """Updates the pinned leaderboard message with custom rank emojis."""
+    channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+    if not channel:
+        return
 
-    embed = discord.Embed(title="🏆 ARCHIVE ARENA TOP 10", color=0xd4af37)
-    desc = ""
-    for i, (name, pts, streak) in enumerate(top, 1):
-        fire = f"🔥{streak}" if streak >= 3 else ""
-        desc += f"{i}. **{name}** - `{pts} RP` {fire}\n"
-    embed.description = desc
-    embed.set_footer(text="Arena Tracker")
-    
-    try:
-        msg = await channel.fetch_message(LEADERBOARD_MSG_ID)
-        await msg.edit(embed=embed)
-    except:
-        await channel.send(embed=embed)
+    # Sort players by RP descending
+    sorted_players = sorted(player_data.items(), key=lambda x: x[1]['points'], reverse=True)
+    top_10 = sorted_players[:10]
+
+    embed = discord.Embed(
+        title="🏆 ARENA LEADERBOARD - TOP 10 🏆",
+        description="The top 10 warriors in the Archive Arena.",
+        color=0x2ecc71
+    )
+
+    lb_text = ""
+    for i, (user_id, data) in enumerate(top_10, 1):
+        user = bot.get_user(int(user_id))
+        name = user.display_name if user else f"Unknown({user_id})"
+        
+        # Get the rank info to pull the custom emoji
+        rank_info = get_rank_info(data['points'])
+        rank_emoji = rank_info['name'].split()[0]  # Grabs the <:emoji:ID> part
+        
+        lb_text += f"{i}. {rank_emoji} **{name}** — {data['points']} RP\n"
+
+    embed.description = lb_text if lb_text else "No matches played yet."
+    embed.set_footer(text="Last 10 Matches") # Matches your preferred footer
+
+    # Logic to edit the existing message or send a new one
+    # (Assuming you have 'leaderboard_msg_id' stored)
+    global leaderboard_msg_id
+    if leaderboard_msg_id:
+        try:
+            msg = await channel.fetch_message(leaderboard_msg_id)
+            await msg.edit(embed=embed)
+        except:
+            msg = await channel.send(embed=embed)
+            leaderboard_msg_id = msg.id
+    else:
+        msg = await channel.send(embed=embed)
+        leaderboard_msg_id = msg.id
+
 
 # --- Match Handling Views ---
 
