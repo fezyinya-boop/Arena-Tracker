@@ -1082,6 +1082,42 @@ async def payout_info_launcher(ctx):
 
     embed.set_footer(text="Archive Arena • Payout System")
     await ctx.send(embed=embed)
+
+
+@bot.command()
+async def register(ctx, tag: str):
+    """Links a user's Cashtag to their profile for payouts."""
+    # 1. Validation: Ensure it looks like a Cashtag
+    if not tag.startswith('$'):
+        return await ctx.send("❌ **Error:** Your tag must start with `$` (e.g., `!register $ArchiveKing`)")
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    try:
+        # 2. The "Setter": Saves the tag to the 'cashtag' column for this user
+        c.execute("""
+            INSERT INTO profiles (user_id, cashtag) 
+            VALUES (?, ?) 
+            ON CONFLICT(user_id) DO UPDATE SET cashtag = excluded.cashtag
+        """, (str(ctx.author.id), tag))
+        
+        conn.commit()
+        
+        # 3. Confirmation
+        embed = discord.Embed(
+            title="✅ Registration Successful",
+            description=f"Your payout handle has been set to **{tag}**.",
+            color=0x00D632 # Cash App Green
+        )
+        embed.set_footer(text="This information is hidden from your public profile.")
+        await ctx.send(embed=embed)
+
+    except Exception as e:
+        await ctx.send(f"⚠️ **Database Error:** {e}")
+    finally:
+        conn.close()
+        
     
     
 
