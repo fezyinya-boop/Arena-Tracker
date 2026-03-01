@@ -157,9 +157,10 @@ async def update_player_role(member, points):
 # --- Match Handling Views --- #
 
 class MatchReportingView(discord.ui.View):
-    def __init__(self, p1, p2):
+    def __init__(self, p1, p2, match_id):
         super().__init__(timeout=1800)
         self.p1, self.p2 = p1, p2
+        self.match_id = match_id
         self.reports = {p1.id: None, p2.id: None}
         self.report_p1.label = f"{p1.display_name} Won"
         self.report_p2.label = f"{p2.display_name} Won"
@@ -168,6 +169,15 @@ class MatchReportingView(discord.ui.View):
         w_mem = self.p1 if winner_id == self.p1.id else self.p2
         l_mem = self.p2 if winner_id == self.p1.id else self.p1
         
+        # --- META TRACKING UPDATE ---
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("UPDATE matches SET winner_id = ?, status = 'completed' WHERE id = ?", 
+                  (str(winner_id), self.match_id))
+        conn.commit()
+        conn.close()
+
+        # --- YOUR ORIGINAL ELO LOGIC ---
         w_data = get_or_create_user(w_mem.id, w_mem.display_name)
         l_data = get_or_create_user(l_mem.id, l_mem.display_name)
 
@@ -189,12 +199,36 @@ class MatchReportingView(discord.ui.View):
 
         rank_info = get_rank_info(r1 + pts)
         embed = discord.Embed(title="⚔️ MATCH VERIFIED", color=rank_info["color"])
-        streak_msg = f"\n🔥 **On a {w_data[5]+1} win streak!**" if w_data[5]+1 >= 3 else ""
-        
         embed.description = f"**{w_mem.display_name}** defeated **{l_mem.display_name}**"
-        embed.add_field(name="RESULTS", value=f"📈 **{w_mem.display_name}**: `+{pts} RP`\n📉 **{l_mem.display_name}**: `-{pts} RP`{streak_msg}", inline=False)
-        embed.set_footer(text="Arena Tracker • Match Finalized")
+        embed.add_field(name="RESULTS", value=f"📈 **{w_mem.display_name}**: `+{pts} RP`\n📉 **{l_mem.display_name}**: `-{pts} RP`", inline=False)
+        embed.set_footer(text="Arena Tracker • Meta Data Recorded")
         await interaction.response.edit_message(content=None, embed=embed, view=None)
+
+    @discord.ui.button(label="Player A Won", style=discord.ButtonStyle.success, emoji="⚔️", row=1)
+    async def report_p1(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id not in [self.p1.id, self.p2.id]: return
+        self.reports[interaction.user.id] = self.p1.id
+        await self.check_reports(interaction)
+
+    @discord.ui.button(label="Player B Won", style=discord.ButtonStyle.success, emoji="⚔️", row=1)
+    async def report_p2(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id not in [self.p1.id, self.p2.id]: return
+        self.reports[interaction.user.id] = self.p2.id
+        await self.check_reports(interaction)
+
+    async def check_reports(self, interaction):
+        p1_rep, p2_rep = self.reports[self.p1.id], self.reports[self.p2.id]
+        if p1_rep and p2_rep:
+            if p1_rep != p2_rep:
+                # DISPUTE LOGIC REMAINS INTACT
+                embed = discord.Embed(title="⚠️ MATCH DISPUTE", color=0xe74c3c)
+                embed.description = f"Conflicting reports. A moderator must use `!settle`."
+                await interaction.response.edit_message(content=f"<@&{MOD_ROLE_ID}>", embed=embed, view=None)
+            else:
+                await self.finalize(interaction, p1_rep)
+        else:
+            await interaction.response.edit_message(content=f"⏳ **{interaction.user.display_name}** reported. Waiting for opponent...")
+
 
     @discord.ui.button(label="Player A Won", style=discord.ButtonStyle.success, emoji="⚔️")
     async def report_p1(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -224,6 +258,67 @@ class MatchReportingView(discord.ui.View):
         else:
             await interaction.response.edit_message(content=f"⏳ **{interaction.user.display_name}** reported. Waiting for opponent to verify (30m remains)...")
 
+
+class DeckSelect(discord.ui.Select):
+    def __init__(self, match_id, player_id, player_name):
+        # Pulling the current meta list from your DB for the options
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("SELECT name FROM archetypes")
+        decks = [row[0] for row in c.fetchall()]
+        conn.close()
+
+        options = [discord.SelectOption(label=d) for d in decks]
+        super().__init__(
+            placeholder=f"{player_name}, select your deck...",
+            min_values=1,
+            max_values=1,
+            options=options,
+            custom_id=f"select_{player_id}" # Unique ID for each player's dropdown
+        )
+        self.match_id = match_id
+        self.player_id = player_id
+
+    async def callback(self, interaction: discord.Interaction):
+        # Security: Only the assigned player can use their specific dropdown
+        if str(interaction.user.id) != str(self.player_id):
+            return await interaction.response.send_message("This isn't your menu!", ephemeral=True)
+        
+        selected_deck = self.values[0]
+        
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        
+        # Determine if they are P1 or P2 in this match
+        c.execute("SELECT p1_id FROM matches WHERE id = ?", (self.match_id,))
+        p1_id = c.fetchone()[0]
+        
+        column = "p1_deck" if str(interaction.user.id) == p1_id else "p2_deck"
+        
+        # Save choice to DB
+        c.execute(f"UPDATE matches SET {column} = ? WHERE id = ?", (selected_deck, self.match_id))
+        conn.commit()
+        
+        # Check if BOTH players have selected now
+        c.execute("SELECT p1_deck, p2_deck FROM matches WHERE id = ?", (self.match_id,))
+        p1_d, p2_d = c.fetchone()
+        conn.close()
+
+        await interaction.response.send_message(f"✅ {interaction.user.display_name} locked in **{selected_deck}**!", ephemeral=False)
+
+        # If both decks are in, authorize the match
+        if p1_d and p2_d:
+            await interaction.channel.send(f"⚔️ **MATCH AUTHORIZED** ⚔️\n**{p1_d}** vs **{p2_d}**\n*Go to your stations!*")
+            # You can also trigger a message to clear the view here if you want
+
+class MatchView(discord.ui.View):
+    def __init__(self, match_id, p1, p2):
+        super().__init__(timeout=None) # No timeout so the menu doesn't die
+        self.add_item(DeckSelect(match_id, p1.id, p1.display_name))
+        self.add_item(DeckSelect(match_id, p2.id, p2.display_name))
+
+
+
 class ChallengeView(discord.ui.View):
     def __init__(self, p1, p2):
         super().__init__(timeout=300)
@@ -232,13 +327,33 @@ class ChallengeView(discord.ui.View):
     @discord.ui.button(label="Accept Match", style=discord.ButtonStyle.success)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.p2.id: return
+        
+        # 1. Create the Match Entry in the DB
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("INSERT INTO matches (p1_id, p2_id, status) VALUES (?, ?, 'active')", 
+                  (str(self.p1.id), str(self.p2.id)))
+        match_id = c.lastrowid
+        conn.commit()
+        conn.close()
+
+        # 2. Show the Deck Selection UI
         embed = discord.Embed(
             title="⚔️ MATCH ACTIVE",
-            description=f"Match started between **{self.p1.display_name}** and **{self.p2.display_name}**.\n\nOnce finished, **both** players must report the winner below.",
+            description=(f"Match started between **{self.p1.display_name}** and **{self.p2.display_name}**.\n\n"
+                         "**Step 1:** Both players must select their deck below.\n"
+                         "**Step 2:** Once finished, report the winner using the buttons."),
             color=0x3498db
         )
-        embed.set_footer(text="Arena Tracker • Reporting Phase")
-        await interaction.response.edit_message(content=None, embed=embed, view=MatchReportingView(self.p1, self.p2))
+        
+        # We combine the Deck Selection and Reporting into one view for efficiency
+        view = MatchReportingView(self.p1, self.p2, match_id)
+        # Add the dropdowns to the reporting view
+        view.add_item(DeckSelect(match_id, self.p1.id, self.p1.display_name))
+        view.add_item(DeckSelect(match_id, self.p2.id, self.p2.display_name))
+        
+        await interaction.response.edit_message(content=None, embed=embed, view=view)
+        
 
 # --- Commands ---
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
@@ -916,67 +1031,6 @@ async def tourney_open(ctx):
     button.callback = join_callback
     view.add_item(button)
     await ctx.send(embed=embed, view=view)
-
-# META CALC LOGIC #
-
-
-class DeckSelect(discord.ui.Select):
-    def __init__(self, match_id, player_id, player_name):
-        # Pulling the current meta list from your DB for the options
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute("SELECT name FROM archetypes")
-        decks = [row[0] for row in c.fetchall()]
-        conn.close()
-
-        options = [discord.SelectOption(label=d) for d in decks]
-        super().__init__(
-            placeholder=f"{player_name}, select your deck...",
-            min_values=1,
-            max_values=1,
-            options=options,
-            custom_id=f"select_{player_id}" # Unique ID for each player's dropdown
-        )
-        self.match_id = match_id
-        self.player_id = player_id
-
-    async def callback(self, interaction: discord.Interaction):
-        # Security: Only the assigned player can use their specific dropdown
-        if str(interaction.user.id) != str(self.player_id):
-            return await interaction.response.send_message("This isn't your menu!", ephemeral=True)
-        
-        selected_deck = self.values[0]
-        
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        
-        # Determine if they are P1 or P2 in this match
-        c.execute("SELECT p1_id FROM matches WHERE id = ?", (self.match_id,))
-        p1_id = c.fetchone()[0]
-        
-        column = "p1_deck" if str(interaction.user.id) == p1_id else "p2_deck"
-        
-        # Save choice to DB
-        c.execute(f"UPDATE matches SET {column} = ? WHERE id = ?", (selected_deck, self.match_id))
-        conn.commit()
-        
-        # Check if BOTH players have selected now
-        c.execute("SELECT p1_deck, p2_deck FROM matches WHERE id = ?", (self.match_id,))
-        p1_d, p2_d = c.fetchone()
-        conn.close()
-
-        await interaction.response.send_message(f"✅ {interaction.user.display_name} locked in **{selected_deck}**!", ephemeral=False)
-
-        # If both decks are in, authorize the match
-        if p1_d and p2_d:
-            await interaction.channel.send(f"⚔️ **MATCH AUTHORIZED** ⚔️\n**{p1_d}** vs **{p2_d}**\n*Go to your stations!*")
-            # You can also trigger a message to clear the view here if you want
-
-class MatchView(discord.ui.View):
-    def __init__(self, match_id, p1, p2):
-        super().__init__(timeout=None) # No timeout so the menu doesn't die
-        self.add_item(DeckSelect(match_id, p1.id, p1.display_name))
-        self.add_item(DeckSelect(match_id, p2.id, p2.display_name))
         
 
 @bot.command()
