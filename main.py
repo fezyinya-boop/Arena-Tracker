@@ -11,7 +11,6 @@ from leaderboard_gen import make_leaderboard_image
 # --- Config & Secrets ---
 TOKEN = os.environ["DISCORD_TOKEN"]
 LEADERBOARD_CHANNEL_ID = int(os.environ['LEADERBOARD_CHANNEL_ID'])
-LEADERBOARD_MSG_ID = 1476843531191717972 
 MOD_ROLE_ID = 123456789012345678  # <--- Ensure this is your Role ID
 
 # --- Railway-Proof Database Logic ---
@@ -237,58 +236,27 @@ async def leaderboard(ctx):
     # This just triggers the same refresh logic manually
     await refresh_leaderboard(ctx.guild)
     await ctx.send("✅ Leaderboard refreshed/posted in the designated channel!")
-    
-    
-        
 
-async def update_leaderboard():
-    """Updates the pinned leaderboard message with custom rank emojis."""
-    channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-    if not channel:
-        return
-
-    # Sort players by RP descending
-    sorted_players = sorted(player_data.items(), key=lambda x: x[1]['points'], reverse=True)
-    top_10 = sorted_players[:10]
-
-    embed = discord.Embed(
-        title="🏆 ARENA LEADERBOARD - TOP 10 🏆",
-        description="The top 10 warriors in the Archive Arena.",
-        color=0x2ecc71
-    )
-
-    lb_text = ""
-    for i, (user_id, data) in enumerate(top_10, 1):
-        user = bot.get_user(int(user_id))
-        name = user.display_name if user else f"Unknown({user_id})"
-        
-        # Get the rank info to pull the custom emoji
-        rank_info = get_rank_info(data['points'])
-        rank_emoji = rank_info['name'].split()[0]  # Grabs the <:emoji:ID> part
-        
-        lb_text += f"{i}. {rank_emoji} **{name}** — {data['points']} RP\n"
-
-    embed.description = lb_text if lb_text else "No matches played yet."
-    embed.set_footer(text="Last 10 Matches") # Matches your preferred footer
-
-    # Logic to edit the existing message or send a new one
-    # (Assuming you have 'leaderboard_msg_id' stored)
-    global leaderboard_msg_id
-    if leaderboard_msg_id:
-        try:
-            msg = await channel.fetch_message(leaderboard_msg_id)
-            await msg.edit(embed=embed)
-        except:
-            msg = await channel.send(embed=embed)
-            leaderboard_msg_id = msg.id
-    else:
-        msg = await channel.send(embed=embed)
-        leaderboard_msg_id = msg.id
-
-@bot.event
+    @bot.event
 async def on_ready():
     init_db()
+    
+    # 🔗 Link your existing message to the Database
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # Replace the number below with your actual Message ID
+    target_id = '1476843531191717972' 
+    
+    c.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('leaderboard_msg_id', ?)", (target_id,))
+    conn.commit()
+    conn.close()
+    
+    print(f"Logged in as {bot.user} | Leaderboard linked to {target_id}")
+    
+    
     print("Arena Tracker Online.")
+
+
 
 @bot.command()
 async def testlb(ctx):
@@ -618,17 +586,17 @@ async def history(ctx, member: discord.Member = None):
     if not raw_hist: return await ctx.send(f"No match history for {member.display_name}.")
     
     display = ""
-    for entry in reversed(raw_hist):
+        for entry in reversed(raw_hist):
         parts = entry.split(":")
-        if len(parts) == 3: 
-            res, opp, rp = parts
+        if len(parts) >= 3: 
+            res, opp, rp = parts[0], parts[1], parts[2]
             circle = "🟢" if res == "W" else "🔴"
-            arrow = "📈" if res == "W" else "📉"
-            display += f"{circle} **{res}** vs {opp} ({arrow} `{rp} RP`)\n"
-        else: 
+            display += f"{circle} **{res}** vs {opp} (`+{rp} RP` if res == 'W' else `-{rp} RP`)\n"
+        elif len(parts) == 1 and parts[0]: # Handles very old "W" or "L" entries
             res = parts[0]
             circle = "🟢" if res == "W" else "🔴"
-            display += f"{circle} **{res}** (Match data unavailable)\n"
+            display += f"{circle} **{res}** (Legacy Match)\n"
+
 
     embed = discord.Embed(title=f"📜 {member.display_name}'s History", description=display, color=0x3498db)
     # FOOTER UPDATED: Removed Arena Tracker
