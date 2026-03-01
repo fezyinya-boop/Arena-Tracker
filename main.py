@@ -4,7 +4,9 @@ import sqlite3
 import os
 import asyncio
 import math
-import random 
+import random
+import fetch_avatar
+from profile_card import make_profile_card
 
 # --- Config & Secrets ---
 TOKEN = os.environ["DISCORD_TOKEN"]
