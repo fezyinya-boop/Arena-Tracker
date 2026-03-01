@@ -1,25 +1,17 @@
 from PIL import Image, ImageDraw, ImageFont
 import aiohttp
 import io
-import re
 import os
+import re
 
 # --- FONT LOADER ---
 def load_safe_font(size):
-    font_paths = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "DejaVuSans-Bold.ttf",
-        "arial.ttf"
-    ]
-    for path in font_paths:
-        try:
-            return ImageFont.truetype(path, size)
-        except:
-            continue
-    return ImageFont.load_default()
+    font_path = "./fonts/DejaVuSans-Bold.ttf"
+    if os.path.exists(font_path):
+        return ImageFont.truetype(font_path, size)
+    return ImageFont.load_default()  # fallback
 
-# --- BADGE PATHS ---
+# --- Badges ---
 BADGES_DIR = os.path.join(os.path.dirname(__file__), 'badges')
 RANK_BADGES = {
     "DIAMOND":  os.path.join(BADGES_DIR, 'rank_diamond.png'),
@@ -36,13 +28,12 @@ def get_rank_badge(rank_name_raw: str, size: int = 40):
     clean = clean_rank_name(rank_name_raw).upper()
     path = RANK_BADGES.get(clean)
     if not path or not os.path.exists(path):
-        return None 
+        return None
     try:
         return Image.open(path).convert('RGBA').resize((size, size), Image.LANCZOS)
     except:
         return None
 
-# --- AVATAR FETCH ---
 async def fetch_avatar(url: str):
     try:
         async with aiohttp.ClientSession() as session:
@@ -54,104 +45,90 @@ async def fetch_avatar(url: str):
         pass
     return None
 
-# --- PROFILE CARD GENERATOR ---
 def make_profile_card(
-    display_name: str,
-    p_title: str,
-    p_move: str,
-    pts: int,
-    wins: int,
-    losses: int,
-    streak: int,
-    pct: float,
-    current_rank_raw: str,
-    next_rank_raw: str | None,
-    rank_color: tuple,
-    avatar_img: Image.Image | None = None,
-) -> io.BytesIO:
-
-    print("NEW PROFILE CARD VERSION LOADED")  # Debug line
-
-    # --- CARD BASE ---
+    display_name, p_title, p_move, pts, wins, losses, streak, pct,
+    current_rank_raw, next_rank_raw, rank_color, avatar_img=None
+):
     W, H = 600, 600
-    card = Image.new('RGBA', (W, H), (18, 18, 18, 255))  # dark background
+    card = Image.new('RGBA', (W, H), (30,30,30,255))
     draw = ImageDraw.Draw(card)
 
-    # --- FONTS ---
-    f_name   = load_safe_font(80)
-    f_rank   = load_safe_font(36)
-    f_label  = load_safe_font(28)
-    f_value  = load_safe_font(48)
-    f_pts    = load_safe_font(130)
-    f_prog   = load_safe_font(18)
+    # --- Fonts ---
+    f_name   = load_safe_font(100)
+    f_rank   = load_safe_font(48)
+    f_label  = load_safe_font(36)
+    f_value  = load_safe_font(60)
+    f_pts    = load_safe_font(160)
+    f_prog   = load_safe_font(28)
+    f_footer = load_safe_font(20)
 
-    # --- AVATAR ---
+    # --- Avatar ---
     av_size = 180
-    av_x = (W - av_size) // 2
-    av_y = 50
+    av_x, av_y = (W - av_size) // 2, 50
+
     if avatar_img:
         av = avatar_img.resize((av_size, av_size))
     else:
-        av = Image.new('RGBA', (av_size, av_size), (40, 40, 40, 255))
+        av = Image.new('RGBA', (av_size, av_size), (50,50,50,255))
 
     mask = Image.new('L', (av_size, av_size), 0)
-    ImageDraw.Draw(mask).ellipse([(0,0),(av_size-1,av_size-1)], fill=255)
-    av_circ = Image.new('RGBA', (av_size, av_size), (0,0,0,0))
+    ImageDraw.Draw(mask).ellipse([(0,0),(av_size,av_size)], fill=255)
+    av_circ = Image.new('RGBA', (av_size,av_size), (0,0,0,0))
     av_circ.paste(av, mask=mask)
 
-    # Glow ring
+    # Avatar ring
     ring_size = av_size + 14
     ring = Image.new('RGBA', (ring_size, ring_size), (0,0,0,0))
-    ImageDraw.Draw(ring).ellipse(
-        [(0,0),(ring_size-1, ring_size-1)],
-        outline=(*rank_color,255), width=7
-    )
-    card.paste(ring, (av_x-7, av_y-7), ring)
-    card.paste(av_circ, (av_x, av_y), av_circ)
+    ImageDraw.Draw(ring).ellipse([(0,0),(ring_size-1, ring_size-1)], outline=(*rank_color,255), width=7)
+    card.paste(ring, (av_x-7,av_y-7), ring)
+    card.paste(av_circ, (av_x,av_y), av_circ)
 
-    # --- CURRENT RANK BADGE ---
+    # Current Rank Badge
     cur_badge = get_rank_badge(current_rank_raw, size=55)
     if cur_badge:
         card.paste(cur_badge, (av_x + av_size - 40, av_y + av_size - 40), cur_badge)
 
-    # --- HEADER TEXT ---
-    draw.text((W//2, av_y + av_size + 35), display_name, font=f_name, fill=(255,255,255), anchor="mm")
-    draw.text((W//2, av_y + av_size + 80), f"{clean_rank_name(current_rank_raw)} · {p_title}", font=f_rank, fill=(*rank_color,255), anchor="mm")
+    # --- Header Text ---
+    clean_cur = clean_rank_name(current_rank_raw)
+    draw.text((W//2, av_y + av_size + 40), display_name, font=f_name, fill=(255,255,255), anchor="mm")
+    draw.text((W//2, av_y + av_size + 110), f"{clean_cur} · {p_title}", font=f_rank, fill=(*rank_color,255), anchor="mm")
 
-    # --- STATS GRID ---
-    # Left: Rating
-    draw.text((60, 330), "RATING", font=f_label, fill=(150,150,150))
-    draw.text((60, 355), str(pts), font=f_pts, fill=(*rank_color,255))
+    # --- Stats ---
+    total_games = wins + losses
+    wr = round((wins / total_games) * 100) if total_games > 0 else 0
 
-    # Right: Record & Streak
-    total = wins + losses
-    wr = round((wins/total)*100) if total>0 else 0
-    draw.text((340, 345), "RECORD", font=f_label, fill=(150,150,150))
-    draw.text((340, 370), f"{wins}W {losses}L ({wr}%)", font=f_value, fill=(255,255,255))
-    streak_label = "🔥 STREAK" if streak >=3 else "STREAK"
-    draw.text((340, 415), streak_label, font=f_label, fill=(150,150,150))
-    draw.text((340, 440), f"{streak} Win Streak", font=f_value, fill=(255,255,255))
+    # Left - Rating
+    draw.text((60, 320), "RATING", font=f_label, fill=(180,180,180))
+    draw.text((60, 365), str(pts), font=f_pts, fill=(*rank_color,255))
+
+    # Right - Record / Streak
+    draw.text((340, 345), "RECORD", font=f_label, fill=(180,180,180))
+    draw.text((340, 390), f"{wins}W {losses}L ({wr}%)", font=f_value, fill=(255,255,255))
+    
+    streak_label = "🔥 STREAK" if streak >= 3 else "STREAK"
+    draw.text((340, 450), streak_label, font=f_label, fill=(180,180,180))
+    draw.text((340, 495), f"{streak} Win Streak", font=f_value, fill=(255,255,255))
 
     # Signature Move
-    draw.text((60, 460), "SIGNATURE MOVE", font=f_label, fill=(150,150,150))
-    draw.text((60, 485), p_move, font=f_value, fill=(255,255,255))
+    draw.text((60, 520), "SIGNATURE MOVE", font=f_label, fill=(180,180,180))
+    draw.text((60, 565), p_move, font=f_value, fill=(255,255,255))
 
-    # --- PROGRESS BAR ---
-    bar_x, bar_y = 60, 535
+    # --- Progress Bar ---
+    bar_x, bar_y = 60, 590
     bar_w, bar_h = 420, 20
-    draw.rounded_rectangle([(bar_x, bar_y),(bar_x+bar_w, bar_y+bar_h)], radius=10, fill=(40,40,40))
+    draw.rounded_rectangle([(bar_x, bar_y), (bar_x+bar_w, bar_y+bar_h)], radius=10, fill=(50,50,50))
     fill_w = int(bar_w * min(pct,1.0))
     if fill_w>5:
-        draw.rounded_rectangle([(bar_x, bar_y),(bar_x+fill_w, bar_y+bar_h)], radius=10, fill=(*rank_color,255))
+        draw.rounded_rectangle([(bar_x, bar_y), (bar_x+fill_w, bar_y+bar_h)], radius=10, fill=(*rank_color,255))
 
-    # Next rank badge & text
     if next_rank_raw:
         next_badge = get_rank_badge(next_rank_raw, size=60)
         if next_badge:
-            card.paste(next_badge, (bar_x + bar_w + 15, bar_y - 20), next_badge)
-        draw.text((bar_x, bar_y - 25), f"{int(pct*100)}% to {clean_rank_name(next_rank_raw)}", font=f_prog, fill=(180,180,180))
+            card.paste(next_badge, (bar_x+bar_w+15, bar_y-20), next_badge)
+        clean_next = clean_rank_name(next_rank_raw)
+        draw.text((bar_x, bar_y-25), f"{int(pct*100)}% to {clean_next}", font=f_prog, fill=(200,200,200))
 
-    # --- SAVE TO BUFFER ---
+    # --- Done ---
     buf = io.BytesIO()
     card.save(buf, 'PNG')
     buf.seek(0)
