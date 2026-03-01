@@ -5,3 +5,5 @@ requests
 flask
 flask-cors
 gunicorn
+playwright==1.42.0
+asyncio
