@@ -1047,7 +1047,7 @@ tournament_active = False
 tournament_bracket = []  # List of match dictionaries
 
 
-@bot.command(aliases=['payouts', 'tourney'])
+@bot.command(aliases=['payouts', 'tourney']) # 'rules' alias REMOVED to stop the crash
 async def tourny_rules(ctx):
     """Displays the official Cash App tournament and payout rules."""
     embed = discord.Embed(
@@ -1059,15 +1059,14 @@ async def tourny_rules(ctx):
         color=0x00D632 # Cash App Green
     )
 
-    # --- THE REGISTRATION PROCESS & PRIVACY ---
+    # --- THE REGISTRATION PROCESS ---
     embed.add_field(
-        name="📝 HOW TO GET PAID (REQUIRED)",
+        name="📝 HOW TO GET PAID (INTERNAL REGISTRATION)",
         value=(
             "To receive your prize, you must link your Cash App handle to your profile:\n"
             "1. Type **`!register $YourTag`** (e.g., `!register $ArchiveKing`).\n"
-            "2. **PRIVACY LOCK:** Your $Cashtag is **NOT** visible on your public `!profile` card.\n"
-            "3. **STAFF ONLY:** Only authorized Moderators can retrieve your tag for the purpose of sending prize money.\n"
-            "4. Use the command again at any time to update your information."
+            "2. **PRIVACY:** Your $Cashtag is **NOT** visible to other users or on your public profile card.\n"
+            "3. **STAFF ACCESS:** Only authorized Moderators can view your tag for the sole purpose of prize distribution."
         ),
         inline=False
     )
@@ -1076,7 +1075,7 @@ async def tourny_rules(ctx):
     embed.add_field(
         name="📲 CASH APP PAYOUTS",
         value=(
-            "• **Accuracy:** Double-check your $Cashtag! We are not responsible for "
+            "• **Accuracy:** Ensure your $Cashtag is correct. We are not responsible for "
             "funds sent to the wrong user due to typos in your registration.\n"
             "• **Claim Window:** You must have a tag registered within 24 hours of "
             "the tournament ending, or the prize is returned to the arena pool."
@@ -1091,7 +1090,7 @@ async def tourny_rules(ctx):
             "• **Bot Validation:** Matches must start via `!duel`. No 'off-record' games.\n"
             "• **Reporting:** Use the bot buttons immediately after the match.\n"
             "• **Disputes:** Screenshots/Video are **required** for proof. If a dispute "
-            "occurs, a <@&" + str(MOD_ROLE_ID) + "> will review and `!settle` it."
+            "occurs, a Moderator will review and `!settle` it."
         ),
         inline=False
     )
