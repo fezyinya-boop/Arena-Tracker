@@ -395,13 +395,26 @@ async def profile(ctx, member: discord.Member = None):
     embed.add_field(name="⚔️ Record", value=f"{data[3]}W - {data[4]}L ({wr}%)", inline=True)
     embed.add_field(name="🔥 Streak", value=f"{data[5]} Win Streak", inline=True)
 
-    # 4. Progress Bar at the Bottom
-    embed.add_field(name="🚀 Rank Progress", value=prog_display, inline=False)
-    
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="Archive Arena | Season 1")
+        # 4. Progress Bar with Emoji Target
+    if next_rank:
+        # Extract the emoji from the next rank's name (e.g., "<:Silver:123...> ")
+        next_emoji = next_rank['name'].split(' ')[0]
+        
+        total_needed = next_rank['min'] - r_info['min']
+        current_progress = pts - r_info['min']
+        
+        # Calculate for 10-segment bar and percentage
+        percent_int = min(max(int((current_progress / total_needed) * 10), 0), 10)
+        bar = "▰" * percent_int + "▱" * (10 - percent_int)
+        perc_text = int((current_progress / total_needed) * 100)
+        
+        # Using the emoji instead of the name string
+        prog_display = f"{bar} {perc_text}% to {next_emoji}"
+    else:
+        prog_display = "▰▰▰▰▰▰▰▰▰▰ **MAX RANK REACHED**"
 
-    await ctx.send(embed=embed)
+    embed.add_field(name="🚀 Rank Progress", value=prog_display, inline=False)
+
     
     
 
