@@ -4,18 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Archive Arena // Season 1</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #080808;
-            --surface: #0f0f0f;
-            --surface2: #161616;
-            --border: #222;
-            --border-light: #2e2e2e;
-            --white: #f2f0eb;
-            --muted: #666;
+            --bg: #060608;
+            --surface: #0e0e12;
+            --surface2: #14141a;
+            --border: #1e1e26;
+            --border-light: #2a2a36;
+            --white: #f0ede8;
+            --muted: #55556a;
             --gold: #c9a84c;
-            --silver: #b0b0c0;
+            --gold-bright: #f5e08a;
+            --silver: #a8a8c0;
             --bronze: #b87840;
         }
 
@@ -32,13 +33,36 @@
             overflow-x: hidden;
         }
 
-        /* Header flush to top */
+        /* BACKGROUND ATMOSPHERE */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .bg-glow {
+            position: fixed;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 900px;
+            height: 500px;
+            background: radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.07) 0%, rgba(100,80,200,0.04) 40%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* HEADER - Removed top padding to eliminate black space at browser top */
         .header {
             position: relative;
             z-index: 1;
             width: 100%;
             max-width: 900px;
-            padding: 0px 30px 40px; 
+            padding: 0 30px 0; 
             display: flex;
             flex-direction: column;
             align-items: flex-start;
@@ -46,13 +70,13 @@
 
         .header-eyebrow {
             font-family: 'DM Mono', monospace;
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             font-weight: 500;
-            letter-spacing: 0.3em;
+            letter-spacing: 0.32em;
             color: var(--gold);
             text-transform: uppercase;
-            margin-top: 15px; /* Slight breathing room from browser edge */
-            margin-bottom: 12px;
+            margin-top: 18px; /* Standard offset from top edge */
+            margin-bottom: 5px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -61,7 +85,7 @@
         .header-eyebrow::before {
             content: '';
             display: inline-block;
-            width: 24px;
+            width: 20px;
             height: 1px;
             background: var(--gold);
         }
@@ -69,18 +93,45 @@
         h1 {
             font-family: 'Bebas Neue', sans-serif;
             font-size: clamp(4rem, 14vw, 9rem);
-            line-height: 0.88;
+            line-height: 0.82;
             letter-spacing: 0.02em;
             color: var(--white);
+            text-transform: uppercase;
+            margin-top: 15px; 
+            margin-bottom: 15px; /* Reduced to pull leaderboard up */
         }
 
         h1 span {
             display: block;
             -webkit-text-stroke: 1px var(--gold);
             color: transparent;
-            font-size: clamp(2.5rem, 9vw, 5.5rem);
+            font-size: clamp(4rem, 14vw, 9rem);
+            margin-top: 12px; 
         }
 
+        .header-sep {
+            width: 100%;
+            margin-top: 15px; /* Reduced to pull leaderboard up */
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-sep-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--gold) 0%, var(--border) 60%, transparent 100%);
+        }
+
+        .header-sep-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.6rem;
+            letter-spacing: 0.3em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        /* LEADERBOARD */
         .lb-wrap {
             position: relative;
             z-index: 1;
@@ -92,16 +143,15 @@
         .lb-head {
             display: grid;
             grid-template-columns: 56px 1fr 130px 90px;
-            padding: 0 20px 12px;
+            padding: 14px 20px;
             border-bottom: 1px solid var(--border-light);
-            margin-bottom: 4px;
         }
 
         .lb-head span {
             font-family: 'DM Mono', monospace;
-            font-size: 0.62rem;
+            font-size: 0.58rem;
             font-weight: 500;
-            letter-spacing: 0.25em;
+            letter-spacing: 0.28em;
             color: var(--white);
             text-transform: uppercase;
         }
@@ -113,34 +163,32 @@
             display: grid;
             grid-template-columns: 56px 1fr 130px 90px;
             align-items: center;
-            padding: 14px 20px;
+            padding: 13px 20px;
             border-bottom: 1px solid var(--border);
             position: relative;
-            transition: background 0.15s ease;
+            transition: background 0.18s ease;
         }
 
-        /* Rank Overlays - Restored from Reference */
-        .lb-row.rank-1 { background: linear-gradient(90deg, rgba(201,168,76,0.08) 0%, transparent 60%); }
-        .lb-row.rank-2 { background: linear-gradient(90deg, rgba(176,176,192,0.06) 0%, transparent 60%); }
-        .lb-row.rank-3 { background: linear-gradient(90deg, rgba(184,120,64,0.06) 0%, transparent 60%); }
+        .lb-row:hover { background: var(--surface2); }
+
+        .lb-row.rank-1 { background: linear-gradient(90deg, rgba(201,168,76,0.09) 0%, transparent 55%); }
+        .lb-row.rank-2 { background: linear-gradient(90deg, rgba(168,168,192,0.06) 0%, transparent 55%); }
+        .lb-row.rank-3 { background: linear-gradient(90deg, rgba(184,120,64,0.07) 0%, transparent 55%); }
 
         .lb-row.rank-1::before, .lb-row.rank-2::before, .lb-row.rank-3::before {
             content: '';
             position: absolute;
-            left: 0; top: 20%; bottom: 20%;
+            left: 0; top: 18%; bottom: 18%;
             width: 2px;
-            border-radius: 1px;
+            border-radius: 2px;
         }
         .lb-row.rank-1::before { background: var(--gold); }
         .lb-row.rank-2::before { background: var(--silver); }
         .lb-row.rank-3::before { background: var(--bronze); }
 
-        .pos {
-            font-family: 'DM Mono', monospace;
-            font-size: 0.72rem;
-            color: var(--muted);
-            text-align: center;
-        }
+        .pos-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .pos { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+        .pos-emoji { font-size: 1.1rem; line-height: 1; margin-bottom: 2px; }
 
         .lb-row.rank-1 .pos { color: var(--gold); }
         .lb-row.rank-2 .pos { color: var(--silver); }
@@ -151,6 +199,9 @@
             font-size: 1.05rem;
             text-transform: uppercase;
             color: var(--white);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         @keyframes gold-sweep {
@@ -159,51 +210,51 @@
         }
 
         .lb-row.rank-1 .name {
-            background: linear-gradient(90deg, #bf953f, #fcf6ba, #b38728, #fcf6ba, #bf953f);
+            background: linear-gradient(90deg, #a06820, #fcf6ba, #c9a84c, #fcf6ba, #a06820);
             background-size: 200% auto;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: gold-sweep 3.5s linear infinite;
+            animation: gold-sweep 4s linear infinite;
         }
 
-        .lb-row.rank-2 .name { color: #d8d8e0; }
-        .lb-row.rank-3 .name { color: #d8a070; }
-
-        .rating-col { font-family: 'DM Mono', monospace; text-align: center; color: var(--white); font-size: 0.9rem;}
-        .rating-label { display: block; font-size: 0.58rem; color: var(--muted); margin-top: 1px; letter-spacing: 0.2em; }
+        .rating-col { font-family: 'DM Mono', monospace; text-align: center; color: var(--white); font-size: 0.88rem; }
+        .rating-label { display: block; font-size: 0.55rem; color: var(--muted); margin-top: 2px; letter-spacing: 0.25em; }
 
         .rank-col { display: flex; align-items: center; justify-content: center; }
-        .emblem { width: 36px; height: 36px; object-fit: contain; }
+        .emblem { width: 34px; height: 34px; object-fit: contain; transition: transform 0.2s; }
+        .lb-row:hover .emblem { transform: scale(1.12); }
 
         .lb-footer {
-            padding: 16px 20px;
+            padding: 14px 20px;
             border-top: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        /* Player count style update: Faded like RP label */
-        #player-count {
-            font-family: 'DM Mono', monospace;
-            font-size: 0.62rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .refresh-bar-wrap { width: 60px; height: 2px; background: var(--border-light); overflow: hidden; }
+        .footer-left { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); text-transform: uppercase; }
+        .footer-right { display: flex; align-items: center; gap: 8px; font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); text-transform: uppercase; }
+        .refresh-bar-wrap { width: 50px; height: 2px; background: var(--border); overflow: hidden; }
         .refresh-bar { height: 100%; background: var(--gold); transition: width 1s linear; }
 
         @media (max-width: 600px) {
-            .lb-head, .lb-row { grid-template-columns: 44px 1fr 100px 60px; }
+            .lb-head, .lb-row { grid-template-columns: 48px 1fr 90px 52px; }
+            h1 { font-size: clamp(3.2rem, 14vw, 5rem); margin-bottom: 10px; }
+            h1 span { font-size: clamp(3.2rem, 14vw, 5rem); margin-top: 5px; }
         }
     </style>
 </head>
 <body>
+
+    <div class="bg-glow"></div>
+
     <header class="header">
         <div class="header-eyebrow">Season 1 &nbsp;·&nbsp; Leaderboard</div>
         <h1>Archive<span>Arena</span></h1>
+        <div class="header-sep">
+            <div class="header-sep-line"></div>
+            <span class="header-sep-label">Rankings</span>
+        </div>
     </header>
 
     <main class="lb-wrap">
@@ -215,10 +266,12 @@
         </div>
         <div id="lb-content"></div>
         <div class="lb-footer">
-            <span id="player-count">—</span>
-            <div style="display:flex; align-items:center; gap:6px; font-family:'DM Mono'; font-size:0.62rem; color:var(--muted); text-transform: uppercase;">
+            <span class="footer-left" id="player-count">—</span>
+            <div class="footer-right">
                 <span>Refreshes in</span>
-                <div class="refresh-bar-wrap"><div class="refresh-bar" id="refresh-bar" style="width:100%"></div></div>
+                <div class="refresh-bar-wrap">
+                    <div class="refresh-bar" id="refresh-bar" style="width:100%"></div>
+                </div>
                 <span id="countdown">60s</span>
             </div>
         </div>
@@ -234,7 +287,7 @@
         bronze:   "https://cdn.discordapp.com/emojis/1476994147935322265.png"
     };
 
-    function getRankLabel(points) {
+    function getRank(points) {
         if (points >= 1800) return 'diamond';
         if (points >= 1600) return 'platinum';
         if (points >= 1400) return 'gold';
@@ -250,15 +303,17 @@
             data.sort((a, b) => b.points - a.points);
 
             container.innerHTML = data.map((p, i) => {
-                const rankKey = getRankLabel(p.points);
-                // logic to apply rank-1, rank-2, rank-3 classes for the overlays
+                const rankKey = getRank(p.points);
                 const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+                const medals = ["🥇", "🥈", "🥉"];
+
                 return `
                     <div class="lb-row ${rankClass}">
-                        <span class="pos">${String(i + 1).padStart(2, '0')}</span>
-                        <div style="padding-left:8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            <span class="name">${p.name}</span>
+                        <div class="pos-cell">
+                            ${i < 3 ? `<span class="pos-emoji">${medals[i]}</span>` : ''}
+                            <span class="pos">${String(i + 1).padStart(2, '0')}</span>
                         </div>
+                        <div style="padding-left:8px; overflow:hidden;"><span class="name">${p.name}</span></div>
                         <div class="rating-col">
                             <span>${p.points.toLocaleString()}</span>
                             <span class="rating-label">RP</span>
@@ -273,7 +328,7 @@
             document.getElementById('player-count').textContent = data.length + ' players enlisted';
             startCountdown();
         } catch (err) {
-            container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted); font-family:'DM Mono'; font-size: 0.7rem;">SYSTEM OFFLINE</div>`;
+            container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted); font-family:'DM Mono';">SYSTEM OFFLINE</div>`;
         }
     }
 
@@ -285,12 +340,11 @@
             left--;
             document.getElementById('countdown').textContent = left + 's';
             document.getElementById('refresh-bar').style.width = (left / 60 * 100) + '%';
-            if (left <= 0) clearInterval(timer);
+            if (left <= 0) syncLeaderboard();
         }, 1000);
     }
 
     syncLeaderboard();
-    setInterval(syncLeaderboard, 60000);
     </script>
 </body>
 </html>
