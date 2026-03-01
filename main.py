@@ -121,7 +121,7 @@ async def update_player_role(member, points):
         await member.add_roles(role)
 
 
-# --- Match Handling Views ---
+# --- Match Handling Views --- #
 
 class MatchReportingView(discord.ui.View):
     def __init__(self, p1, p2):
@@ -236,15 +236,14 @@ async def leaderboard(ctx):
     # This just triggers the same refresh logic manually
     await refresh_leaderboard(ctx.guild)
     await ctx.send("✅ Leaderboard refreshed/posted in the designated channel!")
-
-    @bot.event
+    
+@bot.event
 async def on_ready():
     init_db()
     
     # 🔗 Link your existing message to the Database
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    # Replace the number below with your actual Message ID
     target_id = '1476843531191717972' 
     
     c.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('leaderboard_msg_id', ?)", (target_id,))
@@ -252,8 +251,6 @@ async def on_ready():
     conn.close()
     
     print(f"Logged in as {bot.user} | Leaderboard linked to {target_id}")
-    
-    
     print("Arena Tracker Online.")
 
 
@@ -285,7 +282,6 @@ async def setprofile(ctx, field: str, *, value: str):
     valid_fields = {
         "move": "signature_move",
         "title": "title",
-        "class": "class_name",
         "color": "embed_color"
     }
     
@@ -585,17 +581,26 @@ async def history(ctx, member: discord.Member = None):
     raw_hist = data[6].split(",") if data[6] else []
     if not raw_hist: return await ctx.send(f"No match history for {member.display_name}.")
     
-    display = ""
-        for entry in reversed(raw_hist):
+        display = ""
+    for entry in reversed(raw_hist):
         parts = entry.split(":")
+        
+        # Check if the entry has the modern format (Result:Opponent:Points)
         if len(parts) >= 3: 
             res, opp, rp = parts[0], parts[1], parts[2]
             circle = "🟢" if res == "W" else "🔴"
             display += f"{circle} **{res}** vs {opp} (`+{rp} RP` if res == 'W' else `-{rp} RP`)\n"
-        elif len(parts) == 1 and parts[0]: # Handles very old "W" or "L" entries
+            
+        # Fallback for old/legacy entries that might only be "W" or "L"
+        elif len(parts) == 1 and parts[0]: 
             res = parts[0]
             circle = "🟢" if res == "W" else "🔴"
             display += f"{circle} **{res}** (Legacy Match)\n"
+
+    # Final safety check so the embed isn't empty
+    if not display:
+        display = "No recent matches recorded."
+
 
 
     embed = discord.Embed(title=f"📜 {member.display_name}'s History", description=display, color=0x3498db)
