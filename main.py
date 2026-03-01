@@ -343,6 +343,7 @@ async def profile(ctx, member: discord.Member = None):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("SELECT points, wins, losses, streak FROM users WHERE user_id = ?", (str(member.id),))
+    # Default to 1000 RP if user isn't in DB yet
     stats = c.fetchone() or (1000, 0, 0, 0)
     
     c.execute("SELECT title, signature_move, embed_color FROM profiles WHERE user_id = ?", (str(member.id),))
@@ -352,61 +353,64 @@ async def profile(ctx, member: discord.Member = None):
     pts, wins, losses, streak = stats
     p_title, p_move, p_color = bio
 
-    # 2. Improved Rank & Progress Logic
+    # 2. Rank Finder
     current_rank = RANKS[0]
     next_rank = None
     
-    for i in range(len(RANKS)):
-        if pts >= RANKS[i]['min']:
-            current_rank = RANKS[i]
+    # Find the highest rank the player has cleared
+    for i, r in enumerate(RANKS):
+        if pts >= r['min']:
+            current_rank = r
             if i + 1 < len(RANKS):
                 next_rank = RANKS[i+1]
-    
+
     rank_emoji = current_rank['name'].split(' ')[0]
 
-    # 3. Build the Embed
+    # 3. Embed Setup
     try:
         color_value = int(p_color, 16) if p_color else current_rank["color"]
     except:
         color_value = current_rank["color"]
 
     embed = discord.Embed(title=f"{rank_emoji} {member.display_name}", color=color_value)
-    
-    # RPG Header (Tier Removed)
     embed.add_field(name="📜 Title", value=f"*{p_title}*", inline=True)
     embed.add_field(name="✨ Signature Move", value=f"**{p_move}**", inline=True)
 
-    # Core Stats
     wr = round((wins / (wins + losses)) * 100) if (wins + losses) > 0 else 0
     embed.add_field(name="🏆 Rating", value=f"`{pts} RP`", inline=True)
     embed.add_field(name="⚔️ Record", value=f"{wins}W - {losses}L ({wr}%)", inline=True)
-    
-    # Streak - Clean Flame Only
     embed.add_field(name="🔥 Streak", value=f"{streak} Win Streak", inline=True)
 
-    # 4. Progress Bar at the absolute bottom
+    # 4. Progress Bar Calculation
     if next_rank:
         target_label = next_rank['name'].split(' ')[-1]
-        range_total = next_rank['min'] - current_rank['min']
         
-        # Calculate progress within the current tier
-        progress_in_tier = pts - current_rank['min']
+        # Floor is the current rank's requirement (e.g., 1000)
+        # Ceiling is the next rank's requirement (e.g., 1200)
+        floor = current_rank['min']
+        ceiling = next_rank['min']
         
-        # Ensure progress doesn't go negative or over 100% visually
-        filled = min(max(int((progress_in_tier / range_total) * 10), 0), 10)
-        bar = "▰" * filled + "▱" * (10 - filled)
-        perc = int((progress_in_tier / range_total) * 100)
-        prog_display = f"{bar} {perc}% to **{target_label}**"
+        # How many points earned SINCE reaching the current rank
+        progress_in_tier = pts - floor
+        # Total points needed to bridge the gap between tiers
+        needed_in_tier = ceiling - floor
+        
+        # Calculate percentage
+        percent = min(max(int((progress_in_tier / needed_in_tier) * 100), 0), 100)
+        filled_blocks = min(max(int((progress_in_tier / needed_in_tier) * 10), 0), 10)
+        
+        bar = "▰" * filled_blocks + "▱" * (10 - filled_blocks)
+        prog_display = f"{bar} {percent}% to **{target_label}**"
     else:
-        # Only shows if they are actually above the highest rank min
-        prog_display = "▰▰▰▰▰▰▰▰▰▰ **MAX RANK REACHED**"
+        # If points >= 1800 (Diamond), show the "Apex" bar
+        prog_display = "▰▰▰▰▰▰▰▰▰▰ **ASCENDED**"
 
     embed.add_field(name="🚀 Rank Progress", value=prog_display, inline=False)
-    
     embed.set_thumbnail(url=member.display_avatar.url)
     embed.set_footer(text="Archive Arena Season 1")
 
     await ctx.send(embed=embed)
+
     
 
 @bot.command()
