@@ -465,56 +465,7 @@ async def on_ready():
     ))
 
 @bot.command(aliases=['payouts']) # Removed 'rules' from here
-async def tourny_rules(ctx):
-    """Displays the official Cash App tournament and payout rules."""
-    embed = discord.Embed(
-        title="🏆 ARCHIVE ARENA: TOURNAMENT PROTOCOL",
-        description=(
-            "All participants must follow these rules to ensure a fair bracket and "
-            "guaranteed payouts. Failure to comply may result in a DQ."
-        ),
-        color=0x00D632 # Cash App Green
-    )
 
-    embed.add_field(
-        name="📲 CASH APP PAYOUTS",
-        value=(
-            "• **Primary Method:** All prizes are sent via **Cash App**.\n"
-            "• **Cashtag Accuracy:** You must provide your correct **$Cashtag**. "
-            "We are not responsible for funds sent to the wrong user due to typos.\n"
-            "• **Claim Window:** Winners must DM a Moderator their tag within 24 hours. "
-            "Prizes unclaimed after 7 days are returned to the prize pool."
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="⚔️ MATCH EXECUTION",
-        value=(
-            "• **Bot Validation:** Matches must start via `!duel`. No 'off-record' games.\n"
-            "• **Reporting:** Use the bot buttons immediately after the match. "
-            "Intentional false reporting is an instant ban.\n"
-            "• **Disputes:** Screenshots/Video are **required** for proof. If a dispute "
-            "occurs, a <@&" + str(MOD_ROLE_ID) + "> will review and `!settle` it."
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="🚫 INTEGRITY & CONDUCT",
-        value=(
-            "• **No Collusion:** Pot-splitting or throwing matches is a permanent DQ.\n"
-            "• **Disconnects:** You have 3 minutes to reconnect before forfeiting the game.\n"
-            "• **Respect:** Zero tolerance for toxicity in match-chat or DMs."
-        ),
-        inline=False
-    )
-
-    embed.set_footer(text="Archive Arena • Official Competitive Standard")
-    # Optional: If you have a Cash App or Trophy icon URL, put it here:
-    # embed.set_thumbnail(url="IMAGE_URL_HERE")
-
-    await ctx.send(embed=embed)
     
 
 @bot.command()
@@ -1094,6 +1045,56 @@ async def settle(ctx, winner: discord.Member, loser: discord.Member):
 tournament_players = []  # List of member objects
 tournament_active = False
 tournament_bracket = []  # List of match dictionaries
+
+
+@bot.command(aliases=['payouts', 'tourney']) # 'rules' alias removed to fix the crash
+async def tourny_rules(ctx):
+    """Displays the official Cash App tournament and payout rules."""
+    embed = discord.Embed(
+        title="🏆 ARCHIVE ARENA: TOURNAMENT PROTOCOL",
+        description=(
+            "All participants must follow these rules to ensure a fair bracket and "
+            "guaranteed payouts. Failure to comply may result in a DQ."
+        ),
+        color=0x00D632 # Cash App Green
+    )
+
+    # NEW: The Registration Process Field
+    embed.add_field(
+        name="📝 HOW TO REGISTER FOR PAYOUTS",
+        value=(
+            "To receive your prize, you must link your Cash App handle to your profile:\n"
+            "1. Use the command: `!register $YourTag` (e.g., `!register $ArchiveKing`)\n"
+            "2. This information is **private** and only visible to Moderators.\n"
+            "3. You only need to do this once unless your Cashtag changes."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="📲 CASH APP PAYOUTS",
+        value=(
+            "• **Accuracy:** Ensure your $Cashtag is correct. We are not responsible for "
+            "funds sent to the wrong user due to typos in your registration.\n"
+            "• **Claim Window:** Winners must have a tag registered within 24 hours of "
+            "the tournament ending or the prize is forfeited."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="⚔️ MATCH EXECUTION",
+        value=(
+            "• **Bot Validation:** Matches must start via `!duel`.\n"
+            "• **Disputes:** Screenshots/Video are **required**. If a dispute "
+            "occurs, a <@&" + str(MOD_ROLE_ID) + "> will review and `!settle` it."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Archive Arena • Secure Payout System")
+    await ctx.send(embed=embed)
+    
 
 @bot.command()
 @commands.has_permissions(manage_messages=True)
