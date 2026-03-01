@@ -222,8 +222,16 @@
         silver: "https://cdn.discordapp.com/emojis/1477421174249099416.png",
         bronze: "https://cdn.discordapp.com/emojis/1476994147935322265.png"
     };
+        function getRank(points) {
+    if (points >= 1800) return 'diamond';
+    if (points >= 1600) return 'platinum';
+    if (points >= 1400) return 'gold';
+    if (points >= 1200) return 'silver';
+    return 'bronze';
+        }
+        
 
-    async function syncLeaderboard() {
+       async function syncLeaderboard() {
         try {
             const response = await fetch(API_URL);
             const data = await response.json();
@@ -248,7 +256,7 @@
         } catch (err) {
             console.error("Connection to Arena Lost. Retrying...", err);
         }
-    }
+                }
 
     // Initial load
     syncLeaderboard();
