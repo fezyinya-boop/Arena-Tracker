@@ -19,21 +19,31 @@ DB_NAME = os.getenv("DB_PATH", "arena_tracker.db")
 
 def init_db():
     global DB_NAME
-            DB_NAME = "arena_tracker.db"
-    # If the path includes a folder (like /data/), make sure the folder exists
+    # 1. Identify the directory path
     db_dir = os.path.dirname(DB_NAME)
+    
+    # 2. Handle directory creation if a path is provided
     if db_dir and not os.path.exists(db_dir):
         try:
             os.makedirs(db_dir)
+            print(f"Created directory: {db_dir}")
         except OSError:
-            print(f"Directory {db_dir} could not be created. Using local root.")
-            # Fallback to local if Railway Volume isn't mounted yet
+            print(f"Directory {db_dir} could not be created. Falling back.")
+            DB_NAME = "arena_tracker.db"
 
+    # 3. Connect and create tables
     conn = sqlite3.connect(DB_NAME)
-    # ... rest of your table creation code ...
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users
+                 (user_id TEXT PRIMARY KEY, name TEXT, points INTEGER, 
+                  wins INTEGER, losses INTEGER, streak INTEGER, history TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS profiles
+                 (user_id TEXT PRIMARY KEY, bio TEXT, title TEXT, 
+                  main_char TEXT, favorite_move TEXT, is_premium INTEGER DEFAULT 0)''')
     conn.commit()
     conn.close()
     print(f"Database active at: {DB_NAME}")
+
     
 
 # --- Rank Config ---
