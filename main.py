@@ -603,9 +603,12 @@ async def tourney_end(ctx):
     embed.set_footer(text="Dispute Resolved")
     await ctx.send(embed=embed)
 
-    if __name__ == "__main__":
-    # 1. Initialize the DB first so the tables exist before the bot tries to read them
-    init_db() 
+if __name__ == "__main__":
+    try:
+        init_db()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"Database failed to initialize: {e}")
     
 
 bot.run(TOKEN)
