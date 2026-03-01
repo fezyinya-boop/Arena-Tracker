@@ -66,19 +66,18 @@ def init_db():
     conn.commit()
     conn.close()
 
+ 3. DATABASE HELPER (Block 1)
 def get_or_create_user(user_id, name):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("SELECT * FROM users WHERE user_id = ?", (str(user_id),))
-    row = c.fetchone()
-    if row:
-        conn.close()
-        return list(row)
-    
-    c.execute("INSERT INTO users VALUES (?, ?, 1000, 0, 0, 0, '')", (str(user_id), name))
-    conn.commit()
+    user = c.fetchone()
+    if user is None:
+        user = (str(user_id), name, 1000, 0, 0, 0, "")
+        c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)", user)
+        conn.commit()
     conn.close()
-    return [str(user_id), name, 1000, 0, 0, 0, ""]
+    return user
 
 def update_user_stats(u_id, pts, wins, losses, streak, history):
     conn = sqlite3.connect(DB_NAME)
@@ -341,31 +340,41 @@ async def duel(ctx, opponent: discord.Member):
 @bot.command()
 async def rank(ctx, member: discord.Member = None):
     member = member or ctx.author
+    
+    # Fetch fresh data from DB (0:id, 1:name, 2:pts, 3:wins, 4:losses, 5:streak)
     data = get_or_create_user(member.id, member.display_name)
     pts = data[2]
+    
+    # Get current rank info (color, name, min requirements)
     r_info = get_rank_info(pts)
     
+    # --- Progress Bar Logic ---
     next_rank = next((r for r in reversed(RANKS) if r['min'] > pts), None)
     if next_rank:
         total_needed = next_rank['min'] - r_info['min']
         current_progress = pts - r_info['min']
+        # Calculate percentage (0-10 for the bar, 0-100 for the text)
         percent = min(max(int((current_progress / total_needed) * 10), 0), 10)
         bar = "▰" * percent + "▱" * (10 - percent)
         progress_val = f"{bar} {int((current_progress/total_needed)*100)}% to {next_rank['name']}"
     else:
         progress_val = "▰▰▰▰▰▰▰▰▰▰ **MAX RANK**"
 
-    embed = discord.Embed(title=member.display_name, color=r_info["color"])
+    # --- Build the Embed ---
+    embed = discord.Embed(title=f"战 {member.display_name}", color=r_info["color"])
     embed.add_field(name="🏆 RATING", value=f"{pts} RP", inline=True)
     embed.add_field(name="🔥 STREAK", value=f"{data[5]} Wins", inline=True)
     
-    win_rate = round((data[3] / (data[3] + data[4])) * 100) if (data[3] + data[4]) > 0 else 0
+    # Win Rate Calc: data[3] is wins, data[4] is losses
+    total_games = data[3] + data[4]
+    win_rate = round((data[3] / total_games) * 100) if total_games > 0 else 0
+    
     embed.add_field(name="⚔️ RECORD", value=f"{data[3]}W - {data[4]}L ({win_rate}%)", inline=False)
     embed.add_field(name="🚀 PROGRESS", value=progress_val, inline=False)
     
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="Arena Tracker")
     await ctx.send(embed=embed)
+
 
 @bot.command()
 async def history(ctx, member: discord.Member = None):
@@ -594,7 +603,9 @@ async def tourney_end(ctx):
     embed.set_footer(text="Dispute Resolved")
     await ctx.send(embed=embed)
 
-    
+    if __name__ == "__main__":
+    # 1. Initialize the DB first so the tables exist before the bot tries to read them
+    init_db() 
     
 
 bot.run(TOKEN)
