@@ -1047,14 +1047,14 @@ tournament_active = False
 tournament_bracket = []  # List of match dictionaries
 
 
-@bot.command(aliases=['payouts', 'tourney']) # 'rules' alias REMOVED to stop the crash
-async def tourny_rules(ctx):
-    """Displays the official Cash App tournament and payout rules."""
+@bot.command(name="payout_rules", aliases=["tourny_rules", "payouts"])
+async def payout_rules_cmd(ctx):
+    """Displays official tournament and Cash App payout rules."""
     embed = discord.Embed(
         title="🏆 ARCHIVE ARENA: TOURNAMENT PROTOCOL",
         description=(
-            "All participants must follow these rules to ensure a fair bracket and "
-            "guaranteed payouts. Failure to comply may result in a DQ."
+            "All participants must follow these rules for guaranteed payouts. "
+            "Failure to comply may result in disqualification."
         ),
         color=0x00D632 # Cash App Green
     )
@@ -1066,19 +1066,7 @@ async def tourny_rules(ctx):
             "To receive your prize, you must link your Cash App handle to your profile:\n"
             "1. Type **`!register $YourTag`** (e.g., `!register $ArchiveKing`).\n"
             "2. **PRIVACY:** Your $Cashtag is **NOT** visible to other users or on your public profile card.\n"
-            "3. **STAFF ACCESS:** Only authorized Moderators can view your tag for the sole purpose of prize distribution."
-        ),
-        inline=False
-    )
-
-    # --- PAYOUT RULES ---
-    embed.add_field(
-        name="📲 CASH APP PAYOUTS",
-        value=(
-            "• **Accuracy:** Ensure your $Cashtag is correct. We are not responsible for "
-            "funds sent to the wrong user due to typos in your registration.\n"
-            "• **Claim Window:** You must have a tag registered within 24 hours of "
-            "the tournament ending, or the prize is returned to the arena pool."
+            "3. **STAFF ACCESS:** Only authorized Moderators can view your tag for the purpose of prize distribution."
         ),
         inline=False
     )
@@ -1095,8 +1083,21 @@ async def tourny_rules(ctx):
         inline=False
     )
 
+    # --- PAYOUT RULES ---
+    embed.add_field(
+        name="📲 CASH APP PAYOUTS",
+        value=(
+            "• **Accuracy:** Ensure your $Cashtag is correct. We are not responsible for "
+            "funds sent to the wrong user due to typos.\n"
+            "• **Claim Window:** You must have a tag registered within 24 hours of "
+            "the tournament ending."
+        ),
+        inline=False
+    )
+
     embed.set_footer(text="Archive Arena • Secure Payout System")
     await ctx.send(embed=embed)
+
 
     
     
