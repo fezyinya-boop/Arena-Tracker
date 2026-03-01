@@ -155,6 +155,19 @@ async def update_player_role(member, points):
 
 
 # --- Match Handling Views --- #
+
+class LeaderboardWebView(discord.ui.View):
+    def __init__(self, url):
+        super().__init__(timeout=None) # Persistent button
+        self.add_item(discord.ui.Button(
+            label="View Full Rankings", 
+            url=url, 
+            style=discord.ButtonStyle.link,
+            emoji="🌐"
+        ))
+
+        
+
 class MatchReportingView(discord.ui.View):
     def __init__(self, p1, p2, match_id):
         super().__init__(timeout=1800)
@@ -852,56 +865,70 @@ async def history(ctx, member: discord.Member = None):
     embed.set_footer(text="Last 10 Matches")
     await ctx.send(embed=embed)
 
+
 async def refresh_leaderboard(guild):
     try:
         channel = guild.get_channel(LEADERBOARD_CHANNEL_ID)
-        if not channel: return
+        if not channel: 
+            print("⚠️ Leaderboard channel ID is incorrect or inaccessible.")
+            return
 
-        # 1. Fetch data from your local DB
+        # 1. Fetch Top 10 from Database
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         c.execute("SELECT name, points, streak FROM users ORDER BY points DESC LIMIT 10")
         top_players = c.fetchall()
         
-        # Get the saved message ID to edit it
+        # 2. Get the saved message ID (to avoid spamming the channel)
         c.execute("SELECT value FROM config WHERE key = 'leaderboard_msg_id'")
         row = c.fetchone()
         saved_msg_id = int(row[0]) if row else None
         conn.close()
 
-        # 2. Build the Embed
-        embed = discord.Embed(title="⚔️ ARCHIVE ARENA: TOP 10", color=0xFFD700)
+        # 3. Construct the Leaderboard Text
+        embed = discord.Embed(
+            title="⚔️ ARCHIVE ARENA: TOP 10", 
+            color=0xFFD700,
+            timestamp=discord.utils.utcnow() # Adds a "Last Updated" clock
+        )
+        
         description = ""
         for i, (name, pts, streak) in enumerate(top_players, 1):
-            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "💀"
+            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "🔹"
             fire = "🔥" if streak >= 3 else ""
             description += f"{medal} **{name}** {fire} — `{pts} RP`\n"
         
-        embed.description = description or "The arena is silent..."
-        embed.set_footer(text="Updates live | View full ranks at fezyinya-boop.github.io/Arena-Tracker/")
+        embed.description = description or "The arena is currently empty..."
+        embed.set_footer(text="Rankings refresh after every match")
 
-        # 3. Update or Send new message
-        new_msg = None
+        # 4. Initialize the Link Button View
+        # Your GitHub Pages URL
+        site_url = "https://fezyinya-boop.github.io/Arena-Tracker/"
+        view = LeaderboardWebView(url=site_url)
+
+        # 5. Update the Message
+        msg = None
         if saved_msg_id:
             try:
                 msg = await channel.fetch_message(saved_msg_id)
-                await msg.edit(embed=embed)
-            except:
-                # If message was deleted, send a new one
-                new_msg = await channel.send(embed=embed)
+                await msg.edit(embed=embed, view=view)
+            except (discord.NotFound, discord.Forbidden):
+                # If message was deleted or we lost perms, send a new one
+                msg = await channel.send(embed=embed, view=view)
         else:
-            new_msg = await channel.send(embed=embed)
+            msg = await channel.send(embed=embed, view=view)
 
-        # 4. Save the New ID if we had to send a new message
-        if new_msg:
+        # 6. Save the Message ID if it changed
+        if msg and (not saved_msg_id or msg.id != saved_msg_id):
             conn = sqlite3.connect(DB_NAME)
             c = conn.cursor()
-            c.execute("INSERT OR REPLACE INTO config (key, value) VALUES ('leaderboard_msg_id', ?)", (str(new_msg.id),))
+            c.execute("INSERT OR REPLACE INTO config (key, value) VALUES ('leaderboard_msg_id', ?)", (str(msg.id),))
             conn.commit()
             conn.close()
 
     except Exception as e:
-        print(f"Refresh Failed: {e}")
+        print(f"❌ Leaderboard Refresh Error: {e}")
+        
         
 
 
