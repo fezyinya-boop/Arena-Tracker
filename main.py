@@ -229,7 +229,6 @@ class MatchReportingView(discord.ui.View):
         else:
             await interaction.response.edit_message(content=f"⏳ **{interaction.user.display_name}** reported. Waiting for opponent...")
 
-
     @discord.ui.button(label="Player A Won", style=discord.ButtonStyle.success, emoji="⚔️")
     async def report_p1(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id not in [self.p1.id, self.p2.id]: return
