@@ -340,43 +340,72 @@ async def setprofile(ctx, field: str, *, value: str):
 async def profile(ctx, member: discord.Member = None):
     member = member or ctx.author
     
-    # 1. Fetch Data from both tables
+    # 1. Fetch Data
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("SELECT points, wins, losses, streak FROM users WHERE user_id = ?", (str(member.id),))
     stats = c.fetchone() or (1000, 0, 0, 0)
     
-    c.execute("SELECT title, signature_move, class_name, embed_color FROM profiles WHERE user_id = ?", (str(member.id),))
-    bio = c.fetchone() or ("Aspirant", "None", "Freelancer", None)
+    c.execute("SELECT title, signature_move, embed_color FROM profiles WHERE user_id = ?", (str(member.id),))
+    bio = c.fetchone() or ("Aspirant", "None", None)
     conn.close()
 
     pts, wins, losses, streak = stats
-    p_title, p_move, p_class, p_color = bio
+    p_title, p_move, p_color = bio
 
-    # 2. Determine Rank (Same logic as before)
-    current_rank = next((r for r in reversed(RANKS) if pts >= r['min']), RANKS[0])
-    rank_emoji = current_rank['name'].split(' ')[0]
+    # 2. Determine Rank & Progress
+    current_rank = RANKS[0]
+    next_rank = None
+    for i, r in enumerate(RANKS):
+        if pts >= r['min']:
+            current_rank = r
+            if i + 1 < len(RANKS):
+                next_rank = RANKS[i+1]
     
+    rank_emoji = current_rank['name'].split(' ')[0]
+    rank_label = current_rank['name'].split(' ')[-1]
+
     # 3. Build the Embed
-    # Use custom color if set, otherwise use Rank color
-    color_value = int(p_color, 16) if p_color else current_rank["color"]
+    # Handle custom color or default to rank color
+    try:
+        color_value = int(p_color, 16) if p_color else current_rank["color"]
+    except:
+        color_value = current_rank["color"]
+
     embed = discord.Embed(title=f"{rank_emoji} {member.display_name}", color=color_value)
     
-    # RPG Identity Section
+    # RPG Header
     embed.add_field(name="📜 Title", value=f"*{p_title}*", inline=True)
-    embed.add_field(name="🎭 Class", value=p_class, inline=True)
+    embed.add_field(name="🛡️ Tier", value=rank_label, inline=True)
     embed.add_field(name="✨ Signature Move", value=f"**{p_move}**", inline=False)
 
-    # Core Stats Section
+    # Core Stats
     wr = round((wins / (wins + losses)) * 100) if (wins + losses) > 0 else 0
     embed.add_field(name="🏆 Rating", value=f"`{pts} RP`", inline=True)
-    embed.add_field(name="⚔️ Win Rate", value=f"{wr}%", inline=True)
-    embed.add_field(name="🔥 Streak", value=f"{streak} Wins", inline=True)
+    embed.add_field(name="⚔️ Record", value=f"{wins}W - {losses}L ({wr}%)", inline=True)
+    
+    streak_display = f"🔥 {streak} Win Streak!" if streak >= 3 else f"{streak} Wins"
+    embed.add_field(name="⚡ Streak", value=streak_display, inline=True)
 
+    # 4. Progress Bar at the Bottom
+    if next_rank:
+        target_label = next_rank['name'].split(' ')[-1]
+        range_total = next_rank['min'] - current_rank['min']
+        progress = pts - current_rank['min']
+        filled = min(max(int((progress / range_total) * 10), 0), 10)
+        bar = "▰" * filled + "▱" * (10 - filled)
+        perc = int((progress / range_total) * 100)
+        prog_display = f"{bar} {perc}% to **{target_label}**"
+    else:
+        prog_display = "▰▰▰▰▰▰▰▰▰▰ **MAX RANK REACHED**"
+
+    embed.add_field(name="🚀 Rank Progress", value=prog_display, inline=False)
+    
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text=f"Season 1 Archive | Global ID: {member.id}")
+    embed.set_footer(text="Archive Arena Season 1")
 
     await ctx.send(embed=embed)
+
     
 
 
