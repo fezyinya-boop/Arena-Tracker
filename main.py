@@ -124,81 +124,6 @@ async def update_player_role(member, points):
         await member.add_roles(role)
 
 
-@bot.command()
-async def ranks(ctx):
-    """Displays the RP requirements and custom icons for all ranks."""
-    embed = discord.Embed(
-        title="📊 ARCHIVE ARENA RANKING TIERS",
-        description="Earn RP by winning duels to climb the ladder!",
-        color=0xffffff  # Neutral white for the full list
-    )
-
-    # We build the list from highest to lowest
-    rank_list = ""
-    for r in RANKS:
-        rank_list += f"{r['name']} — **{r['min']}+ RP**\n"
-
-    embed.add_field(name="Current Tiers", value=rank_list, inline=False)
-    
-    # Adding a little tip at the bottom
-    embed.set_footer(text="Higher ranks earn more prestige in the Leaderboard!")
-    
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def leaderboard(ctx):
-    # This just triggers the same refresh logic manually
-    await refresh_leaderboard(ctx.guild)
-    await ctx.send("✅ Leaderboard refreshed/posted in the designated channel!")
-    
-    
-        
-
-async def update_leaderboard():
-    """Updates the pinned leaderboard message with custom rank emojis."""
-    channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-    if not channel:
-        return
-
-    # Sort players by RP descending
-    sorted_players = sorted(player_data.items(), key=lambda x: x[1]['points'], reverse=True)
-    top_10 = sorted_players[:10]
-
-    embed = discord.Embed(
-        title="🏆 ARENA LEADERBOARD - TOP 10 🏆",
-        description="The top 10 warriors in the Archive Arena.",
-        color=0x2ecc71
-    )
-
-    lb_text = ""
-    for i, (user_id, data) in enumerate(top_10, 1):
-        user = bot.get_user(int(user_id))
-        name = user.display_name if user else f"Unknown({user_id})"
-        
-        # Get the rank info to pull the custom emoji
-        rank_info = get_rank_info(data['points'])
-        rank_emoji = rank_info['name'].split()[0]  # Grabs the <:emoji:ID> part
-        
-        lb_text += f"{i}. {rank_emoji} **{name}** — {data['points']} RP\n"
-
-    embed.description = lb_text if lb_text else "No matches played yet."
-    embed.set_footer(text="Last 10 Matches") # Matches your preferred footer
-
-    # Logic to edit the existing message or send a new one
-    # (Assuming you have 'leaderboard_msg_id' stored)
-    global leaderboard_msg_id
-    if leaderboard_msg_id:
-        try:
-            msg = await channel.fetch_message(leaderboard_msg_id)
-            await msg.edit(embed=embed)
-        except:
-            msg = await channel.send(embed=embed)
-            leaderboard_msg_id = msg.id
-    else:
-        msg = await channel.send(embed=embed)
-        leaderboard_msg_id = msg.id
-
-
 # --- Match Handling Views ---
 
 class MatchReportingView(discord.ui.View):
@@ -287,6 +212,80 @@ class ChallengeView(discord.ui.View):
 
 # --- Commands ---
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
+
+@bot.command()
+async def ranks(ctx):
+    """Displays the RP requirements and custom icons for all ranks."""
+    embed = discord.Embed(
+        title="📊 ARCHIVE ARENA RANKING TIERS",
+        description="Earn RP by winning duels to climb the ladder!",
+        color=0xffffff  # Neutral white for the full list
+    )
+
+    # We build the list from highest to lowest
+    rank_list = ""
+    for r in RANKS:
+        rank_list += f"{r['name']} — **{r['min']}+ RP**\n"
+
+    embed.add_field(name="Current Tiers", value=rank_list, inline=False)
+    
+    # Adding a little tip at the bottom
+    embed.set_footer(text="Higher ranks earn more prestige in the Leaderboard!")
+    
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def leaderboard(ctx):
+    # This just triggers the same refresh logic manually
+    await refresh_leaderboard(ctx.guild)
+    await ctx.send("✅ Leaderboard refreshed/posted in the designated channel!")
+    
+    
+        
+
+async def update_leaderboard():
+    """Updates the pinned leaderboard message with custom rank emojis."""
+    channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+    if not channel:
+        return
+
+    # Sort players by RP descending
+    sorted_players = sorted(player_data.items(), key=lambda x: x[1]['points'], reverse=True)
+    top_10 = sorted_players[:10]
+
+    embed = discord.Embed(
+        title="🏆 ARENA LEADERBOARD - TOP 10 🏆",
+        description="The top 10 warriors in the Archive Arena.",
+        color=0x2ecc71
+    )
+
+    lb_text = ""
+    for i, (user_id, data) in enumerate(top_10, 1):
+        user = bot.get_user(int(user_id))
+        name = user.display_name if user else f"Unknown({user_id})"
+        
+        # Get the rank info to pull the custom emoji
+        rank_info = get_rank_info(data['points'])
+        rank_emoji = rank_info['name'].split()[0]  # Grabs the <:emoji:ID> part
+        
+        lb_text += f"{i}. {rank_emoji} **{name}** — {data['points']} RP\n"
+
+    embed.description = lb_text if lb_text else "No matches played yet."
+    embed.set_footer(text="Last 10 Matches") # Matches your preferred footer
+
+    # Logic to edit the existing message or send a new one
+    # (Assuming you have 'leaderboard_msg_id' stored)
+    global leaderboard_msg_id
+    if leaderboard_msg_id:
+        try:
+            msg = await channel.fetch_message(leaderboard_msg_id)
+            await msg.edit(embed=embed)
+        except:
+            msg = await channel.send(embed=embed)
+            leaderboard_msg_id = msg.id
+    else:
+        msg = await channel.send(embed=embed)
+        leaderboard_msg_id = msg.id
 
 @bot.event
 async def on_ready():
