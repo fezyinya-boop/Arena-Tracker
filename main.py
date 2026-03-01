@@ -152,6 +152,13 @@ async def ranks(ctx):
     embed.set_footer(text="Higher ranks earn more prestige in the Leaderboard!")
     
     await ctx.send(embed=embed)
+
+@bot.command()
+async def leaderboard(ctx):
+    # This just triggers the same refresh logic manually
+    await refresh_leaderboard(ctx.guild)
+    await ctx.send("✅ Leaderboard refreshed/posted in the designated channel!")
+    
     
         
 
@@ -455,19 +462,19 @@ async def refresh_leaderboard(guild):
     
     leaderboard_text = ""
     for i, (name, pts, streak) in enumerate(top_players, 1):
-        # Determine Rank using your custom RANKS list
-        # We look for the highest 'min' value that is <= the player's points
-        current_rank_name = "UNRANKED"
+        # Determine Rank
+        emblem_only = "💀" # Default if no rank found
         for rank in reversed(RANKS):
             if pts >= rank['min']:
-                current_rank_name = rank['name']
+                # This splits "<:rookie:123> BRONZE" and takes only the first part
+                emblem_only = rank['name'].split(' ')[0]
                 break
         
         # Fire Emoji for 3+ Win Streak
         streak_flare = " 🔥" if streak >= 3 else ""
         
-        # Format: 1. <emoji> RANK Name 🔥 — 1200 RP
-        leaderboard_text += f"**{i}.** {current_rank_name} **{name}**{streak_flare} — `{pts} RP`\n"
+        # Format: 1. <:rookie:123> Name 🔥 — 1200 RP
+        leaderboard_text += f"**{i}.** {emblem_only} **{name}**{streak_flare} — `{pts} RP`\n"
 
     embed.description = leaderboard_text or "The arena is silent... post a match to begin."
     embed.set_footer(text="Updates automatically | Use !rank to see your progress")
