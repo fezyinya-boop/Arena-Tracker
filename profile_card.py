@@ -53,14 +53,13 @@ def make_profile_card(
     card = Image.new('RGBA', (W, H), (30,30,30,255))
     draw = ImageDraw.Draw(card)
 
-    # --- Fonts ---
-    f_name   = load_safe_font(100)
-    f_rank   = load_safe_font(48)
-    f_label  = load_safe_font(36)
-    f_value  = load_safe_font(60)
-    f_pts    = load_safe_font(160)
-    f_prog   = load_safe_font(28)
-    f_footer = load_safe_font(20)
+    #FONTS#
+f_name   = load_safe_font(60)   # Display name
+f_rank   = load_safe_font(28)   # Rank & title
+f_label  = load_safe_font(20)   # "RATING", "STREAK", etc.
+f_value  = load_safe_font(36)   # Values for record, streak, etc.
+f_pts    = load_safe_font(90)   # Main RP rating
+f_prog   = load_safe_font(18)   # Progress bar text
 
     # --- Avatar ---
     av_size = 180
