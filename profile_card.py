@@ -6,9 +6,11 @@ import re
 import os
 import discord
 
-# ── Bulletproof Font Loading ──
+# ==============================
+# FONT LOADER
+# ==============================
+
 def load_safe_font(size):
-    """Railway-proof font loader. Tries Linux paths, then local, then default."""
     font_paths = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
@@ -22,8 +24,13 @@ def load_safe_font(size):
             continue
     return ImageFont.load_default()
 
-# ── Rank badge image paths (Matches your 'rank_' prefix) ──
+
+# ==============================
+# RANK BADGES
+# ==============================
+
 BADGES_DIR = os.path.join(os.path.dirname(__file__), 'badges')
+
 RANK_BADGES = {
     "DIAMOND":  os.path.join(BADGES_DIR, 'rank_diamond.png'),
     "PLATINUM": os.path.join(BADGES_DIR, 'rank_platinum.png'),
@@ -32,23 +39,29 @@ RANK_BADGES = {
     "BRONZE":   os.path.join(BADGES_DIR, 'rank_bronze.png'),
 }
 
+
 def clean_rank_name(name: str) -> str:
-    """Strip Discord custom emoji tags."""
     return re.sub(r'<:[^:]+:\d+>\s*', '', name).strip()
 
+
 def get_rank_badge(rank_name_raw: str, size: int = 40) -> Image.Image | None:
-    """Safety check for badge images to prevent bot crashes."""
     clean = clean_rank_name(rank_name_raw).upper()
     path = RANK_BADGES.get(clean)
+
     if not path or not os.path.exists(path):
-        return None 
+        return None
+
     try:
         return Image.open(path).convert('RGBA').resize((size, size), Image.LANCZOS)
     except:
         return None
 
+
+# ==============================
+# AVATAR FETCH
+# ==============================
+
 async def fetch_avatar(url: str) -> Image.Image | None:
-    """Fetch avatar with timeout protection."""
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(str(url), timeout=5) as resp:
@@ -58,6 +71,11 @@ async def fetch_avatar(url: str) -> Image.Image | None:
     except:
         pass
     return None
+
+
+# ==============================
+# PROFILE CARD GENERATOR
+# ==============================
 
 def make_profile_card(
     display_name: str,
@@ -73,87 +91,220 @@ def make_profile_card(
     rank_color: tuple,
     avatar_img: Image.Image | None = None,
 ) -> io.BytesIO:
-    
-    # --- 1. SQUARE DIMENSIONS ---
-    W, H = 600, 600 
-    card = Image.new('RGBA', (W, H), (0, 0, 0, 255)) # Solid Black
+
+    # ------------------------------
+    # BASE CANVAS
+    # ------------------------------
+
+    W, H = 600, 600
+    CENTER_X = W // 2
+
+    card = Image.new('RGBA', (W, H), (0, 0, 0, 255))
     draw = ImageDraw.Draw(card)
 
-    # --- 2. THE "CHONKY" FONTS ---
-    # We are significantly increasing these from your previous version
-    f_name   = load_safe_font(52)  # Massive Name
-    f_rank   = load_safe_font(24)  # Clearer Rank/Title
-    f_label  = load_safe_font(20)  # Labels (Rating, Record)
-    f_value  = load_safe_font(30)  # Stats values
-    f_pts    = load_safe_font(90)  # The centerpiece number
-    f_prog   = load_safe_font(20)  
-    f_footer = load_safe_font(16)  
+    # ------------------------------
+    # FONTS
+    # ------------------------------
 
-    # --- 3. LARGE CENTERED AVATAR ---
-    av_size = 180 
-    av_x = (W - av_size) // 2
-    av_y = 60
-    
+    f_name   = load_safe_font(52)
+    f_rank   = load_safe_font(22)
+    f_label  = load_safe_font(18)
+    f_value  = load_safe_font(28)
+    f_pts    = load_safe_font(90)
+    f_prog   = load_safe_font(18)
+
+    # ------------------------------
+    # AVATAR (Centered)
+    # ------------------------------
+
+    av_size = 180
+    av_x = CENTER_X - av_size // 2
+    av_y = 50
+
     if avatar_img:
-        av = avatar_img.resize((av_size, av_size))
+        av = avatar_img.resize((av_size, av_size), Image.LANCZOS)
     else:
         av = Image.new('RGBA', (av_size, av_size), (40, 40, 40, 255))
 
     mask = Image.new('L', (av_size, av_size), 0)
-    ImageDraw.Draw(mask).ellipse([(0, 0), (av_size-1, av_size-1)], fill=255)
+    ImageDraw.Draw(mask).ellipse((0, 0, av_size-1, av_size-1), fill=255)
+
     av_circ = Image.new('RGBA', (av_size, av_size), (0, 0, 0, 0))
     av_circ.paste(av, mask=mask)
 
-    # Thick Glow Ring
+    # Rank glow ring
     ring_size = av_size + 14
     ring = Image.new('RGBA', (ring_size, ring_size), (0, 0, 0, 0))
     ImageDraw.Draw(ring).ellipse(
-        [(0, 0), (ring_size-1, ring_size-1)], outline=(*rank_color, 255), width=7)
+        (0, 0, ring_size-1, ring_size-1),
+        outline=(*rank_color, 255),
+        width=7
+    )
+
     card.paste(ring, (av_x-7, av_y-7), ring)
     card.paste(av_circ, (av_x, av_y), av_circ)
 
-    # Current Badge (Pinned to Avatar)
+    # Current rank badge
     cur_badge = get_rank_badge(current_rank_raw, size=55)
     if cur_badge:
-        card.paste(cur_badge, (av_x + av_size - 40, av_y + av_size - 40), cur_badge)
+        badge_x = av_x + av_size - 40
+        badge_y = av_y + av_size - 40
+        card.paste(cur_badge, (badge_x, badge_y), cur_badge)
 
-    # --- 4. CENTERED HEADER ---
+    # ------------------------------
+    # HEADER TEXT (Centered)
+    # ------------------------------
+
     clean_cur = clean_rank_name(current_rank_raw)
-    draw.text((W//2, av_y + av_size + 40), display_name, font=f_name, fill=(255, 255, 255), anchor="mm")
-    draw.text((W//2, av_y + av_size + 85), f"{clean_cur} · {p_title}", font=f_rank, fill=(*rank_color, 255), anchor="mm")
 
-    # --- 5. MASSIVE STATS GRID ---
-    # Left: Huge Rating
-    draw.text((60, 360), "RATING", font=f_label, fill=(150, 150, 150))
-    draw.text((60, 385), str(pts), font=f_pts, fill=(*rank_color, 255))
+    draw.text(
+        (CENTER_X, av_y + av_size + 35),
+        display_name,
+        font=f_name,
+        fill=(255, 255, 255),
+        anchor="mm"
+    )
 
-    # Right: Record and Streak
+    draw.text(
+        (CENTER_X, av_y + av_size + 80),
+        f"{clean_cur} · {p_title}",
+        font=f_rank,
+        fill=(*rank_color, 255),
+        anchor="mm"
+    )
+
+    # ------------------------------
+    # BALANCED GRID STATS
+    # ------------------------------
+
+    LEFT_COL_X  = CENTER_X - 200
+    RIGHT_COL_X = CENTER_X + 80
+    BASE_Y = 330
+
+    LABEL_SPACING = 28
+    SECTION_SPACING = 90
+
+    label_color = (120, 120, 120)
+    value_color = (255, 255, 255)
+
+    # --- RATING
+    draw.text((LEFT_COL_X, BASE_Y),
+              "RATING",
+              font=f_label,
+              fill=label_color,
+              anchor="lm")
+
+    draw.text((LEFT_COL_X, BASE_Y + LABEL_SPACING),
+              str(pts),
+              font=f_pts,
+              fill=(*rank_color, 255),
+              anchor="lm")
+
+    # --- RECORD
     total = wins + losses
     wr = round((wins / total) * 100) if total > 0 else 0
-    draw.text((360, 370), "RECORD", font=f_label, fill=(150, 150, 150))
-    draw.text((360, 400), f"{wins}W {losses}L", font=f_value, fill=(255, 255, 255))
-    
-    draw.text((360, 445), "STREAK", font=f_label, fill=(150, 150, 150))
-    draw.text((360, 475), f"{streak} 🔥", font=f_value, fill=(255, 165, 0)) # Orange for streak
 
-    # Signature Move (Bottom Left)
-    draw.text((60, 480), "SIGNATURE", font=f_label, fill=(150, 150, 150))
-    draw.text((60, 510), p_move, font=f_value, fill=(255, 255, 255))
+    draw.text((RIGHT_COL_X, BASE_Y),
+              "RECORD",
+              font=f_label,
+              fill=label_color,
+              anchor="lm")
 
-    # --- 6. PROGRESS BAR ---
-    bar_x, bar_y = 60, 550
-    bar_w, bar_h = 480, 20 # Thicker bar
-    draw.rounded_rectangle([(bar_x, bar_y), (bar_x+bar_w, bar_y+bar_h)], radius=10, fill=(40, 40, 40))
-    
+    draw.text((RIGHT_COL_X, BASE_Y + LABEL_SPACING),
+              f"{wins}W {losses}L ({wr}%)",
+              font=f_value,
+              fill=value_color,
+              anchor="lm")
+
+    # --- STREAK
+    streak_label = "🔥 STREAK" if streak >= 3 else "STREAK"
+
+    draw.text((RIGHT_COL_X, BASE_Y + SECTION_SPACING),
+              streak_label,
+              font=f_label,
+              fill=label_color,
+              anchor="lm")
+
+    draw.text((RIGHT_COL_X, BASE_Y + SECTION_SPACING + LABEL_SPACING),
+              f"{streak} Win Streak",
+              font=f_value,
+              fill=value_color,
+              anchor="lm")
+
+    # --- SIGNATURE MOVE
+    draw.text((LEFT_COL_X, BASE_Y + SECTION_SPACING + 20),
+              "SIGNATURE MOVE",
+              font=f_label,
+              fill=label_color,
+              anchor="lm")
+
+    draw.text((LEFT_COL_X, BASE_Y + SECTION_SPACING + 20 + LABEL_SPACING),
+              p_move,
+              font=f_value,
+              fill=value_color,
+              anchor="lm")
+
+    # ------------------------------
+    # CENTERED PROGRESS BAR
+    # ------------------------------
+
+    bar_w = 480
+    bar_h = 20
+    bar_x = (W - bar_w) // 2
+    bar_y = 540
+
+    # Background
+    draw.rounded_rectangle(
+        (bar_x, bar_y, bar_x + bar_w, bar_y + bar_h),
+        radius=10,
+        fill=(35, 35, 35)
+    )
+
+    # Fill
     fill_w = int(bar_w * min(pct, 1.0))
-    if fill_w > 5:
-        draw.rounded_rectangle([(bar_x, bar_y), (bar_x+fill_w, bar_y+bar_h)], radius=10, fill=(*rank_color, 255))
 
-    # --- 7. BORDER ---
-    # This frames the whole card in the rank color
-    draw.rectangle([(0, 0), (W, H)], outline=(*rank_color, 255), width=10)
+    if fill_w > 0:
+        radius = min(10, fill_w // 2)
+        draw.rounded_rectangle(
+            (bar_x, bar_y, bar_x + fill_w, bar_y + bar_h),
+            radius=radius,
+            fill=(*rank_color, 255)
+        )
+
+    # Next rank indicator
+    if next_rank_raw:
+        clean_next = clean_rank_name(next_rank_raw)
+        draw.text(
+            (bar_x, bar_y - 22),
+            f"{int(pct * 100)}% to {clean_next}",
+            font=f_prog,
+            fill=(160, 160, 160),
+            anchor="ls"
+        )
+
+        next_badge = get_rank_badge(next_rank_raw, size=60)
+        if next_badge:
+            card.paste(
+                next_badge,
+                (bar_x + bar_w + 15, bar_y - 25),
+                next_badge
+            )
+
+    # ------------------------------
+    # RANK COLORED BORDER
+    # ------------------------------
+
+    draw.rectangle(
+        (0, 0, W-1, H-1),
+        outline=(*rank_color, 255),
+        width=10
+    )
+
+    # ------------------------------
+    # OUTPUT BUFFER
+    # ------------------------------
 
     buf = io.BytesIO()
-    card.save(buf, 'PNG')
+    card.save(buf, "PNG")
     buf.seek(0)
     return buf
