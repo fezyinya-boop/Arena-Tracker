@@ -3,224 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archive Arena // • Season 1 •</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&family=JetBrains+Mono:wght@500;800&family=Syne:wght@800&display=swap" rel="stylesheet">
+    <title>Archive Arena // Season 1</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #000000;
-            --white: #ffffff;
-            --dim: #444444;
-            --border: #1a1a1a;
+            --bg: #080808;
+            --surface: #0f0f0f;
+            --surface2: #161616;
+            --border: #222;
+            --border-light: #2e2e2e;
+            --white: #f2f0eb;
+            --muted: #666;
+            --gold: #c9a84c;
+            --silver: #b0b0c0;
+            --bronze: #b87840;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            background-color: var(--bg);
+            background: var(--bg);
             color: var(--white);
-            font-family: 'Inter', sans-serif;
-            padding: 40px 15px;
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        /* Gold Shine + Syne Font for Top 3 */
+        /* Header flush to top */
+        .header {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 900px;
+            padding: 0px 30px 40px; 
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .header-eyebrow {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.3em;
+            color: var(--gold);
+            text-transform: uppercase;
+            margin-top: 15px; /* Slight breathing room from browser edge */
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-eyebrow::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 1px;
+            background: var(--gold);
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(4rem, 14vw, 9rem);
+            line-height: 0.88;
+            letter-spacing: 0.02em;
+            color: var(--white);
+        }
+
+        h1 span {
+            display: block;
+            -webkit-text-stroke: 1px var(--gold);
+            color: transparent;
+            font-size: clamp(2.5rem, 9vw, 5.5rem);
+        }
+
+        .lb-wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 900px;
+            padding: 0 30px 80px;
+        }
+
+        .lb-head {
+            display: grid;
+            grid-template-columns: 56px 1fr 130px 90px;
+            padding: 0 20px 12px;
+            border-bottom: 1px solid var(--border-light);
+            margin-bottom: 4px;
+        }
+
+        .lb-head span {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.62rem;
+            font-weight: 500;
+            letter-spacing: 0.25em;
+            color: var(--white);
+            text-transform: uppercase;
+        }
+
+        .lb-head span:nth-child(2) { padding-left: 8px; }
+        .lb-head span:nth-child(3), .lb-head span:nth-child(4) { text-align: center; }
+
+        .lb-row {
+            display: grid;
+            grid-template-columns: 56px 1fr 130px 90px;
+            align-items: center;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            transition: background 0.15s ease;
+        }
+
+        /* Rank Overlays - Restored from Reference */
+        .lb-row.rank-1 { background: linear-gradient(90deg, rgba(201,168,76,0.08) 0%, transparent 60%); }
+        .lb-row.rank-2 { background: linear-gradient(90deg, rgba(176,176,192,0.06) 0%, transparent 60%); }
+        .lb-row.rank-3 { background: linear-gradient(90deg, rgba(184,120,64,0.06) 0%, transparent 60%); }
+
+        .lb-row.rank-1::before, .lb-row.rank-2::before, .lb-row.rank-3::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 20%; bottom: 20%;
+            width: 2px;
+            border-radius: 1px;
+        }
+        .lb-row.rank-1::before { background: var(--gold); }
+        .lb-row.rank-2::before { background: var(--silver); }
+        .lb-row.rank-3::before { background: var(--bronze); }
+
+        .pos {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .lb-row.rank-1 .pos { color: var(--gold); }
+        .lb-row.rank-2 .pos { color: var(--silver); }
+        .lb-row.rank-3 .pos { color: var(--bronze); }
+
+        .name {
+            font-weight: 700;
+            font-size: 1.05rem;
+            text-transform: uppercase;
+            color: var(--white);
+        }
+
         @keyframes gold-sweep {
             0% { background-position: -200% center; }
             100% { background-position: 200% center; }
         }
 
-        .top-rank-gold {
-            font-family: 'Syne', sans-serif !important;
-            letter-spacing: 0.05em;
-            background: linear-gradient(90deg, 
-                #bf953f 0%, 
-                #fcf6ba 25%, 
-                #b38728 50%, 
-                #fcf6ba 75%, 
-                #bf953f 100%);
+        .lb-row.rank-1 .name {
+            background: linear-gradient(90deg, #bf953f, #fcf6ba, #b38728, #fcf6ba, #bf953f);
             background-size: 200% auto;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: gold-sweep 3s linear infinite;
-            font-weight: 800 !important;
-            display: inline-block;
-            filter: drop-shadow(0 0 5px rgba(191, 149, 63, 0.2));
-            transform: scale(1.05);
-            transform-origin: left;
+            animation: gold-sweep 3.5s linear infinite;
         }
 
-        .lb-row:hover .top-rank-gold {
-            -webkit-text-fill-color: transparent !important;
-        }
+        .lb-row.rank-2 .name { color: #d8d8e0; }
+        .lb-row.rank-3 .name { color: #d8a070; }
 
-        /* Branding */
-        .branding { text-align: center; margin-bottom: 50px; width: 100%; }
-        .trophy-wrapper { line-height: 1; margin-bottom: 10px; user-select: none; }
-        .trophy-main { font-size: 2.5rem; display: inline-block; vertical-align: middle; }
-        .title-row { display: flex; align-items: center; justify-content: center; gap: 20px; }
-        .side-icon { font-size: 1.8rem; opacity: 0.6; }
+        .rating-col { font-family: 'DM Mono', monospace; text-align: center; color: var(--white); font-size: 0.9rem;}
+        .rating-label { display: block; font-size: 0.58rem; color: var(--muted); margin-top: 1px; letter-spacing: 0.2em; }
 
-        h1 {
-            font-family: 'Inter', sans-serif;
-            font-size: clamp(2.5rem, 10vw, 6.5rem);
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: -0.05em;
-            line-height: 0.9;
-        }
+        .rank-col { display: flex; align-items: center; justify-content: center; }
+        .emblem { width: 36px; height: 36px; object-fit: contain; }
 
-        .season-tag {
-            display: block;
-            margin-top: 15px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-            font-weight: 800;
-            letter-spacing: 0.4em;
-            color: var(--white);
-            text-transform: uppercase;
-        }
-
-        .season-dot { opacity: 0.5; margin: 0 5px; }
-
-        /* Leaderboard UI */
-        .lb-card {
-            width: 100%;
-            max-width: 850px;
-            border: 1px solid var(--border);
-            background: rgba(0, 0, 0, 0.95);
-        }
-
-        .lb-header {
-            display: grid;
-            grid-template-columns: 40px 1fr 120px 100px; /* Added 40px column for # */
-            background: var(--white);
-            padding: 18px 25px;
-        }
-
-        .lb-header span {
-            color: #000;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            text-align: center;
-        }
-
-        /* Align Player header to the left */
-        .lb-header span:nth-child(2) { text-align: left; padding-left: 15px; }
-
-        .lb-row {
-            display: grid;
-            grid-template-columns: 40px 1fr 120px 100px; /* Matches header grid */
+        .lb-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            padding: 22px 25px;
-            border-bottom: 1px solid var(--border);
-            transition: 0.2s ease;
         }
 
-        .lb-row:hover { background: var(--white); color: #000; }
-
-        .player-col { display: flex; align-items: center; overflow: hidden; }
-
-        .pos {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: #ffffff !important;
-            text-align: center;
-        }
-
-        .lb-row:hover .pos { color: #000 !important; }
-
-        .name {
-            font-weight: 900;
-            font-size: 1.3rem;
+        /* Player count style update: Faded like RP label */
+        #player-count {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--muted);
             text-transform: uppercase;
-            white-space: nowrap;
-            overflow: hidden; 
-            text-overflow: ellipsis;
-            margin-left: 15px;
+            letter-spacing: 0.1em;
         }
 
-        .rating-col {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 800;
-            text-align: center;
-            font-size: 1.1rem;
-        }
-
-        .rank-col { display: flex; justify-content: center; }
-
-        .emblem {
-            width: 40px;
-            height: 40px;
-            vertical-align: middle;
-            filter: none !important; 
-            opacity: 1 !important;
-        }
-
-        .spirit-bg {
-            position: fixed;
-            bottom: -5%;
-            right: -2%;
-            height: 80vh;
-            opacity: 0.08;
-            z-index: -1;
-            filter: grayscale(1) contrast(140%);
-            pointer-events: none;
-        }
+        .refresh-bar-wrap { width: 60px; height: 2px; background: var(--border-light); overflow: hidden; }
+        .refresh-bar { height: 100%; background: var(--gold); transition: width 1s linear; }
 
         @media (max-width: 600px) {
-            .side-icon { display: none; }
-            h1 { font-size: 3rem; }
-            .lb-header, .lb-row { grid-template-columns: 35px 1fr 100px 70px; padding: 15px; }
-            .name { font-size: 1.1rem; margin-left: 10px; }
-            .rating-col { font-size: 0.9rem; }
-            .emblem { width: 32px; height: 32px; }
-            .top-rank-gold { transform: scale(1.02); }
+            .lb-head, .lb-row { grid-template-columns: 44px 1fr 100px 60px; }
         }
     </style>
 </head>
 <body>
+    <header class="header">
+        <div class="header-eyebrow">Season 1 &nbsp;·&nbsp; Leaderboard</div>
+        <h1>Archive<span>Arena</span></h1>
+    </header>
 
-    <img src="https://images.squarespace-cdn.com/content/v1/60f76906a2364c767425ef5f/1630635104068-Y9W00Z9E7Z9Z9Z9Z9Z9Z/Silvie_Spirit.png" class="spirit-bg">
-
-    <div class="branding">
-        <div class="trophy-wrapper">
-            <span class="trophy-main">🏆</span>
-        </div>
-        <div class="title-row">
-            <span class="side-icon">🏆</span>
-            <h1>Archive Arena</h1>
-            <span class="side-icon">🏆</span>
-        </div>
-        <span class="season-tag"><span class="season-dot">•</span> Season 1 <span class="season-dot">•</span></span>
-    </div>
-
-    <div class="lb-card">
-        <div class="lb-header">
+    <main class="lb-wrap">
+        <div class="lb-head">
             <span>#</span>
             <span>Player</span>
             <span>Rating</span>
             <span>Rank</span>
         </div>
         <div id="lb-content"></div>
-    </div>
+        <div class="lb-footer">
+            <span id="player-count">—</span>
+            <div style="display:flex; align-items:center; gap:6px; font-family:'DM Mono'; font-size:0.62rem; color:var(--muted); text-transform: uppercase;">
+                <span>Refreshes in</span>
+                <div class="refresh-bar-wrap"><div class="refresh-bar" id="refresh-bar" style="width:100%"></div></div>
+                <span id="countdown">60s</span>
+            </div>
+        </div>
+    </main>
 
     <script>
     const API_URL = "https://arena-tracker-agent-production.up.railway.app/api/leaderboard";
-
     const EMBLEMS = {
-        diamond: "https://cdn.discordapp.com/emojis/1477427100666433572.png",
+        diamond:  "https://cdn.discordapp.com/emojis/1477427100666433572.png",
         platinum: "https://cdn.discordapp.com/emojis/1477427675067842588.png",
-        gold: "https://cdn.discordapp.com/emojis/1477426026945577000.png",
-        silver: "https://cdn.discordapp.com/emojis/1477421174249099416.png",
-        bronze: "https://cdn.discordapp.com/emojis/1476994147935322265.png"
+        gold:     "https://cdn.discordapp.com/emojis/1477426026945577000.png",
+        silver:   "https://cdn.discordapp.com/emojis/1477421174249099416.png",
+        bronze:   "https://cdn.discordapp.com/emojis/1476994147935322265.png"
     };
 
-    function getRank(points) {
+    function getRankLabel(points) {
         if (points >= 1800) return 'diamond';
         if (points >= 1600) return 'platinum';
         if (points >= 1400) return 'gold';
@@ -229,40 +243,54 @@
     }
 
     async function syncLeaderboard() {
+        const container = document.getElementById('lb-content');
         try {
             const response = await fetch(API_URL);
             const data = await response.json();
-            
             data.sort((a, b) => b.points - a.points);
 
-            const container = document.getElementById('lb-content');
             container.innerHTML = data.map((p, i) => {
-                const rankKey = p.rank ? p.rank.toLowerCase().trim() : getRank(p.points);
-                const emblemUrl = EMBLEMS[rankKey] || EMBLEMS.bronze;
-                const goldClass = i < 3 ? 'top-rank-gold' : '';
-
+                const rankKey = getRankLabel(p.points);
+                // logic to apply rank-1, rank-2, rank-3 classes for the overlays
+                const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
                 return `
-                    <div class="lb-row">
+                    <div class="lb-row ${rankClass}">
                         <span class="pos">${String(i + 1).padStart(2, '0')}</span>
-                        <div class="player-col">
-                            <span class="name ${goldClass}">${p.name}</span>
+                        <div style="padding-left:8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <span class="name">${p.name}</span>
                         </div>
-                        <div class="rating-col">${p.points} RP</div>
+                        <div class="rating-col">
+                            <span>${p.points.toLocaleString()}</span>
+                            <span class="rating-label">RP</span>
+                        </div>
                         <div class="rank-col">
-                            <img src="${emblemUrl}" class="emblem" alt="${rankKey}">
+                            <img src="${EMBLEMS[rankKey]}" class="emblem">
                         </div>
                     </div>
                 `;
             }).join('');
-            
+
+            document.getElementById('player-count').textContent = data.length + ' players enlisted';
+            startCountdown();
         } catch (err) {
-            console.error("Connection Lost", err);
+            container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted); font-family:'DM Mono'; font-size: 0.7rem;">SYSTEM OFFLINE</div>`;
         }
+    }
+
+    let timer;
+    function startCountdown() {
+        let left = 60;
+        if (timer) clearInterval(timer);
+        timer = setInterval(() => {
+            left--;
+            document.getElementById('countdown').textContent = left + 's';
+            document.getElementById('refresh-bar').style.width = (left / 60 * 100) + '%';
+            if (left <= 0) clearInterval(timer);
+        }, 1000);
     }
 
     syncLeaderboard();
     setInterval(syncLeaderboard, 60000);
-</script>
-
+    </script>
 </body>
 </html>
