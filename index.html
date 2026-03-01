@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Archive Arena // • Season 1 •</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&family=JetBrains+Mono:wght@500;800&family=Syne:wght@800&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #000000;
@@ -26,55 +26,42 @@
             min-height: 100vh;
         }
 
-        /* Rainbow Animation for Top 3 */
-        @keyframes rainbow-glow {
-            0% { color: #ff0000; text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
-            33% { color: #00ff00; text-shadow: 0 0 10px rgba(0, 255, 0, 0.5); }
-            66% { color: #0080ff; text-shadow: 0 0 10px rgba(0, 128, 255, 0.5); }
-            100% { color: #ff0000; text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
+        /* Gold Shine + Syne Font for Top 3 */
+        @keyframes gold-sweep {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
         }
 
-        .top-rank-glow {
-            animation: rainbow-glow 4s linear infinite;
-            font-weight: 900 !important;
+        .top-rank-gold {
+            font-family: 'Syne', sans-serif !important;
+            letter-spacing: 0.05em;
+            background: linear-gradient(90deg, 
+                #bf953f 0%, 
+                #fcf6ba 25%, 
+                #b38728 50%, 
+                #fcf6ba 75%, 
+                #bf953f 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gold-sweep 3s linear infinite;
+            font-weight: 800 !important;
+            display: inline-block;
+            filter: drop-shadow(0 0 5px rgba(191, 149, 63, 0.2));
+            transform: scale(1.05);
+            transform-origin: left;
         }
 
-        /* Character Watermark */
-        .spirit-bg {
-            position: fixed;
-            bottom: -5%;
-            right: -2%;
-            height: 80vh;
-            opacity: 0.08;
-            z-index: -1;
-            filter: grayscale(1) contrast(140%);
-            pointer-events: none;
+        .lb-row:hover .top-rank-gold {
+            -webkit-text-fill-color: transparent !important;
         }
 
-        /* Branding Section */
-        .branding {
-            text-align: center;
-            margin-bottom: 50px;
-            width: 100%;
-        }
-
-        .trophy-main {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .title-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-        }
-
-        .side-icon {
-            font-size: 1.8rem;
-            opacity: 0.6;
-        }
+        /* Branding */
+        .branding { text-align: center; margin-bottom: 50px; width: 100%; }
+        .trophy-wrapper { line-height: 1; margin-bottom: 10px; user-select: none; }
+        .trophy-main { font-size: 2.5rem; display: inline-block; vertical-align: middle; }
+        .title-row { display: flex; align-items: center; justify-content: center; gap: 20px; }
+        .side-icon { font-size: 1.8rem; opacity: 0.6; }
 
         h1 {
             font-family: 'Inter', sans-serif;
@@ -87,16 +74,18 @@
 
         .season-tag {
             display: block;
-            margin-top: 10px;
+            margin-top: 15px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.9rem;
             font-weight: 800;
-            letter-spacing: 0.6em;
+            letter-spacing: 0.4em;
             color: var(--white);
             text-transform: uppercase;
         }
 
-        /* Leaderboard Layout */
+        .season-dot { opacity: 0.5; margin: 0 5px; }
+
+        /* Leaderboard UI */
         .lb-card {
             width: 100%;
             max-width: 850px;
@@ -106,7 +95,7 @@
 
         .lb-header {
             display: grid;
-            grid-template-columns: 1fr 120px 100px;
+            grid-template-columns: 40px 1fr 120px 100px; /* Added 40px column for # */
             background: var(--white);
             padding: 18px 25px;
         }
@@ -120,37 +109,31 @@
             text-align: center;
         }
 
-        .lb-header span:first-child { text-align: left; padding-left: 40px; }
+        /* Align Player header to the left */
+        .lb-header span:nth-child(2) { text-align: left; padding-left: 15px; }
 
         .lb-row {
             display: grid;
-            grid-template-columns: 1fr 120px 100px;
+            grid-template-columns: 40px 1fr 120px 100px; /* Matches header grid */
             align-items: center;
             padding: 22px 25px;
             border-bottom: 1px solid var(--border);
             transition: 0.2s ease;
         }
 
-        .lb-row:hover {
-            background: var(--white);
-            color: #000;
-        }
+        .lb-row:hover { background: var(--white); color: #000; }
 
-        .player-col {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            overflow: hidden;
-        }
+        .player-col { display: flex; align-items: center; overflow: hidden; }
 
         .pos {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.75rem;
             color: #ffffff !important;
-            min-width: 25px;
+            text-align: center;
         }
 
-        /* Let the name inherit color so the glow animation works */
+        .lb-row:hover .pos { color: #000 !important; }
+
         .name {
             font-weight: 900;
             font-size: 1.3rem;
@@ -158,6 +141,7 @@
             white-space: nowrap;
             overflow: hidden; 
             text-overflow: ellipsis;
+            margin-left: 15px;
         }
 
         .rating-col {
@@ -167,28 +151,35 @@
             font-size: 1.1rem;
         }
 
-        .rank-col {
-            display: flex;
-            justify-content: center;
-        }
+        .rank-col { display: flex; justify-content: center; }
 
         .emblem {
             width: 40px;
             height: 40px;
             vertical-align: middle;
             filter: none !important; 
-            -webkit-filter: none !important; 
             opacity: 1 !important;
+        }
+
+        .spirit-bg {
+            position: fixed;
+            bottom: -5%;
+            right: -2%;
+            height: 80vh;
+            opacity: 0.08;
+            z-index: -1;
+            filter: grayscale(1) contrast(140%);
+            pointer-events: none;
         }
 
         @media (max-width: 600px) {
             .side-icon { display: none; }
             h1 { font-size: 3rem; }
-            .lb-header, .lb-row { grid-template-columns: 1fr 100px 70px; padding: 15px; }
-            .name { font-size: 1.1rem; }
+            .lb-header, .lb-row { grid-template-columns: 35px 1fr 100px 70px; padding: 15px; }
+            .name { font-size: 1.1rem; margin-left: 10px; }
             .rating-col { font-size: 0.9rem; }
             .emblem { width: 32px; height: 32px; }
-            .lb-header span:first-child { padding-left: 0; text-align: center; }
+            .top-rank-gold { transform: scale(1.02); }
         }
     </style>
 </head>
@@ -197,17 +188,20 @@
     <img src="https://images.squarespace-cdn.com/content/v1/60f76906a2364c767425ef5f/1630635104068-Y9W00Z9E7Z9Z9Z9Z9Z9Z/Silvie_Spirit.png" class="spirit-bg">
 
     <div class="branding">
-        <span class="trophy-main">🏆</span>
+        <div class="trophy-wrapper">
+            <span class="trophy-main">🏆</span>
+        </div>
         <div class="title-row">
             <span class="side-icon">🏆</span>
             <h1>Archive Arena</h1>
             <span class="side-icon">🏆</span>
         </div>
-        <span class="season-tag">Season 1</span>
+        <span class="season-tag"><span class="season-dot">•</span> Season 1 <span class="season-dot">•</span></span>
     </div>
 
     <div class="lb-card">
         <div class="lb-header">
+            <span>#</span>
             <span>Player</span>
             <span>Rating</span>
             <span>Rank</span>
@@ -243,18 +237,15 @@
 
             const container = document.getElementById('lb-content');
             container.innerHTML = data.map((p, i) => {
-                // Determine rank key (lowercase)
                 const rankKey = p.rank ? p.rank.toLowerCase().trim() : getRank(p.points);
                 const emblemUrl = EMBLEMS[rankKey] || EMBLEMS.bronze;
-                
-                // Add glow class if rank is 1, 2, or 3 (index 0, 1, 2)
-                const glowClass = i < 3 ? 'top-rank-glow' : '';
+                const goldClass = i < 3 ? 'top-rank-gold' : '';
 
                 return `
                     <div class="lb-row">
+                        <span class="pos">${String(i + 1).padStart(2, '0')}</span>
                         <div class="player-col">
-                            <span class="pos">${String(i + 1).padStart(2, '0')}</span>
-                            <span class="name ${glowClass}">${p.name}</span>
+                            <span class="name ${goldClass}">${p.name}</span>
                         </div>
                         <div class="rating-col">${p.points} RP</div>
                         <div class="rank-col">
@@ -265,7 +256,7 @@
             }).join('');
             
         } catch (err) {
-            console.error("Connection to Arena Lost. Retrying...", err);
+            console.error("Connection Lost", err);
         }
     }
 
