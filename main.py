@@ -155,7 +155,6 @@ async def update_player_role(member, points):
 
 
 # --- Match Handling Views --- #
-
 class MatchReportingView(discord.ui.View):
     def __init__(self, p1, p2, match_id):
         super().__init__(timeout=1800)
@@ -169,7 +168,7 @@ class MatchReportingView(discord.ui.View):
         w_mem = self.p1 if winner_id == self.p1.id else self.p2
         l_mem = self.p2 if winner_id == self.p1.id else self.p1
         
-        # --- META TRACKING UPDATE ---
+        # 1. Update Match Table for Meta Stats
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         c.execute("UPDATE matches SET winner_id = ?, status = 'completed' WHERE id = ?", 
@@ -177,16 +176,14 @@ class MatchReportingView(discord.ui.View):
         conn.commit()
         conn.close()
 
-        # --- YOUR ORIGINAL ELO LOGIC ---
+        # 2. Points & History Logic
         w_data = get_or_create_user(w_mem.id, w_mem.display_name)
         l_data = get_or_create_user(l_mem.id, l_mem.display_name)
-
         r1, r2 = w_data[2], l_data[2]
         pts = round(32 * (1 - (1 / (1 + 10 ** ((r2 - r1) / 400)))))
 
         w_hist = w_data[6].split(",") if w_data[6] else []
         l_hist = l_data[6].split(",") if l_data[6] else []
-        
         w_hist.append(f"W:{l_mem.display_name}:{pts}")
         l_hist.append(f"L:{w_mem.display_name}:{pts}")
 
@@ -197,6 +194,7 @@ class MatchReportingView(discord.ui.View):
         await update_player_role(l_mem, r2 - pts)
         await refresh_leaderboard(interaction.guild)
 
+        # 3. Success Embed
         rank_info = get_rank_info(r1 + pts)
         embed = discord.Embed(title="⚔️ MATCH VERIFIED", color=rank_info["color"])
         embed.description = f"**{w_mem.display_name}** defeated **{l_mem.display_name}**"
@@ -220,42 +218,17 @@ class MatchReportingView(discord.ui.View):
         p1_rep, p2_rep = self.reports[self.p1.id], self.reports[self.p2.id]
         if p1_rep and p2_rep:
             if p1_rep != p2_rep:
-                # DISPUTE LOGIC REMAINS INTACT
-                embed = discord.Embed(title="⚠️ MATCH DISPUTE", color=0xe74c3c)
-                embed.description = f"Conflicting reports. A moderator must use `!settle`."
+                embed = discord.Embed(
+                    title="⚠️ MATCH DISPUTE",
+                    description=f"**{self.p1.display_name}** and **{self.p2.display_name}** reported different winners.\n\nA <@&{MOD_ROLE_ID}> must resolve this via `!settle`.",
+                    color=0xe74c3c
+                )
                 await interaction.response.edit_message(content=f"<@&{MOD_ROLE_ID}>", embed=embed, view=None)
             else:
                 await self.finalize(interaction, p1_rep)
         else:
             await interaction.response.edit_message(content=f"⏳ **{interaction.user.display_name}** reported. Waiting for opponent...")
-
-    @discord.ui.button(label="Player A Won", style=discord.ButtonStyle.success, emoji="⚔️")
-    async def report_p1(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id not in [self.p1.id, self.p2.id]: return
-        self.reports[interaction.user.id] = self.p1.id
-        await self.check_reports(interaction)
-
-    @discord.ui.button(label="Player B Won", style=discord.ButtonStyle.success, emoji="⚔️")
-    async def report_p2(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id not in [self.p1.id, self.p2.id]: return
-        self.reports[interaction.user.id] = self.p2.id
-        await self.check_reports(interaction)
-
-    async def check_reports(self, interaction):
-        p1_rep, p2_rep = self.reports[self.p1.id], self.reports[self.p2.id]
-        if p1_rep and p2_rep:
-            if p1_rep != p2_rep:
-                embed = discord.Embed(
-                    title="⚠️ MATCH DISPUTE",
-                    description=f"**{self.p1.display_name}** and **{self.p2.display_name}** reported different winners.\n\nAutomated tracking is paused. A <@&{MOD_ROLE_ID}> must resolve this manually.",
-                    color=0xe74c3c
-                )
-                embed.set_footer(text="Arena Tracker • Dispute Phase")
-                await interaction.response.edit_message(content=f"<@&{MOD_ROLE_ID}>", embed=embed, view=None)
-            else:
-                await self.finalize(interaction, p1_rep)
-        else:
-            await interaction.response.edit_message(content=f"⏳ **{interaction.user.display_name}** reported. Waiting for opponent to verify (30m remains)...")
+                
 
 
 class DeckSelect(discord.ui.Select):
