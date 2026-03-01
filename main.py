@@ -20,8 +20,7 @@ MOD_ROLE_ID = 123456789012345678  # <--- Ensure this is your Role ID
 DB_NAME = os.getenv("DB_PATH", "arena_tracker.db")
 
 def init_db():
-    global DB_NAME
-    # 1. Handle directory creation for Railway Volumes
+    # 1. Ensure the directory exists (Crucial for Railway Volumes)
     db_dir = os.path.dirname(DB_NAME)
     if db_dir and not os.path.exists(db_dir):
         try:
@@ -29,28 +28,31 @@ def init_db():
             print(f"✅ Created directory: {db_dir}")
         except OSError:
             print(f"⚠️ Directory {db_dir} could not be created. Falling back to local.")
-            DB_NAME = "arena_tracker.db"
+            # We don't change DB_NAME here to avoid path confusion later
 
-    # 2. Connect and Create Tables
+    # 2. Connect and create ALL tables in one pass
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # User Statistics Table
+    # User Statistics & Match History
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (user_id TEXT PRIMARY KEY, name TEXT, points INTEGER, 
                   wins INTEGER, losses INTEGER, streak INTEGER, history TEXT)''')
     
-    # Leaderboard Configuration Table (Crucial for the auto-update feature)
-    c.execute('''CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)''')
+    # Leaderboard & Bot Configuration
+    c.execute('''CREATE TABLE IF NOT EXISTS config 
+                 (key TEXT PRIMARY KEY, value TEXT)''')
 
-    # Profile Customization Table
+    # RPG Profile Customization
     c.execute('''CREATE TABLE IF NOT EXISTS profiles 
-                 (user_id TEXT PRIMARY KEY, title TEXT, signature_move TEXT, 
-                  class_name TEXT, embed_color TEXT)''')
-    
+                 (user_id TEXT PRIMARY KEY, title TEXT DEFAULT 'Aspirant', 
+                  signature_move TEXT DEFAULT 'None', class_name TEXT DEFAULT 'Freelancer', 
+                  embed_color TEXT)''')
+
     conn.commit()
     conn.close()
-    print(f"🚀 Database initialized and tables verified at: {DB_NAME}")
+    print(f"🚀 Database initialized and all tables verified at: {DB_NAME}")
+
 
 
     # 3. Connect and create tables
@@ -894,13 +896,6 @@ async def tourney_end(ctx):
     )
     embed.set_footer(text="Dispute Resolved")
     await ctx.send(embed=embed)
-
-if __name__ == "__main__":
-    try:
-        init_db()
-        print("Database initialized successfully.")
-    except Exception as e:
-        print(f"Database failed to initialize: {e}")
     
 
 bot.run(TOKEN)
