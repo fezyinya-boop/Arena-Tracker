@@ -1097,27 +1097,33 @@ async def register(ctx, tag: str):
 
 
 @bot.command()
-@commands.has_any_role(1477213439586996285, "Moderator")
 async def payout(ctx, member: discord.Member):
     """MOD ONLY: Pulls a user's registered $Cashtag."""
+    # 1. Manual Role/Admin Check
+    is_mod = any(role.id == 1477213439586996285 for role in ctx.author.roles)
+    is_admin = ctx.author.guild_permissions.administrator
+
+    if not (is_mod or is_admin):
+        return await ctx.send("🚫 **Access Denied:** You need the Moderator role to use this.")
+
+    # 2. Database Lookup
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
     try:
-        # We ensure we are selecting 'cashtag' (the column we just added)
         c.execute("SELECT cashtag FROM profiles WHERE user_id = ?", (str(member.id),))
         result = c.fetchone()
         
         if result and result[0]:
             await ctx.send(f"💸 **Payout Info for {member.display_name}:** `{result[0]}`")
         else:
-            await ctx.send(f"❌ **{member.display_name}** has not registered a tag yet.")
+            await ctx.send(f"❌ **{member.display_name}** has not registered a $Cashtag.")
             
     except Exception as e:
-        # This will tell us if there is still a database naming issue
-        await ctx.send(f"⚠️ **Command Error:** `{e}`")
+        await ctx.send(f"⚠️ **Database Error:** `{e}`")
     finally:
         conn.close()
+
 
     
     
