@@ -74,107 +74,84 @@ def make_profile_card(
     avatar_img: Image.Image | None = None,
 ) -> io.BytesIO:
     
-    # --- 1. NEW "BIG MODE" DIMENSIONS ---
-    W, H = 600, 500 
-    card = Image.new('RGBA', (W, H), (30, 31, 36, 255))
-
-    # Dot grid texture
-    dots = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    dd = ImageDraw.Draw(dots)
-    for y in range(20, H, 30):
-        for x in range(20, W, 30):
-            dd.ellipse([(x-1, y-1), (x+1, y+1)], fill=(255, 255, 255, 10))
-    card = Image.alpha_composite(card, dots)
-
+    # --- 1. SQUARE DIMENSIONS ---
+    W, H = 600, 600 
+    card = Image.new('RGBA', (W, H), (0, 0, 0, 255)) # Solid Black
     draw = ImageDraw.Draw(card)
 
-    # --- 2. UPSCALED FONTS ---
-    f_name   = load_safe_font(42)  
-    f_rank   = load_safe_font(18)  
-    f_label  = load_safe_font(16)  
-    f_value  = load_safe_font(22)  
-    f_pts    = load_safe_font(65)  
-    f_prog   = load_safe_font(16)  
-    f_footer = load_safe_font(14)  
+    # --- 2. THE "CHONKY" FONTS ---
+    # We are significantly increasing these from your previous version
+    f_name   = load_safe_font(52)  # Massive Name
+    f_rank   = load_safe_font(24)  # Clearer Rank/Title
+    f_label  = load_safe_font(20)  # Labels (Rating, Record)
+    f_value  = load_safe_font(30)  # Stats values
+    f_pts    = load_safe_font(90)  # The centerpiece number
+    f_prog   = load_safe_font(20)  
+    f_footer = load_safe_font(16)  
 
-    # --- 3. LARGE AVATAR & RING ---
-    av_size = 130 
-    av_x, av_y = 40, 40
+    # --- 3. LARGE CENTERED AVATAR ---
+    av_size = 180 
+    av_x = (W - av_size) // 2
+    av_y = 60
+    
     if avatar_img:
         av = avatar_img.resize((av_size, av_size))
     else:
-        av = Image.new('RGBA', (av_size, av_size), (55, 57, 63, 255))
+        av = Image.new('RGBA', (av_size, av_size), (40, 40, 40, 255))
 
     mask = Image.new('L', (av_size, av_size), 0)
     ImageDraw.Draw(mask).ellipse([(0, 0), (av_size-1, av_size-1)], fill=255)
     av_circ = Image.new('RGBA', (av_size, av_size), (0, 0, 0, 0))
     av_circ.paste(av, mask=mask)
 
-    # Thick Rank-Colored Ring
-    ring_size = av_size + 8
+    # Thick Glow Ring
+    ring_size = av_size + 14
     ring = Image.new('RGBA', (ring_size, ring_size), (0, 0, 0, 0))
     ImageDraw.Draw(ring).ellipse(
-        [(0, 0), (ring_size-1, ring_size-1)], outline=(*rank_color, 255), width=4)
-    card.paste(ring, (av_x-4, av_y-4), ring)
+        [(0, 0), (ring_size-1, ring_size-1)], outline=(*rank_color, 255), width=7)
+    card.paste(ring, (av_x-7, av_y-7), ring)
     card.paste(av_circ, (av_x, av_y), av_circ)
 
-    # Rank Badge (on Avatar)
-    cur_badge = get_rank_badge(current_rank_raw, size=40)
+    # Current Badge (Pinned to Avatar)
+    cur_badge = get_rank_badge(current_rank_raw, size=55)
     if cur_badge:
-        card.paste(cur_badge, (av_x + av_size - 30, av_y + av_size - 30), cur_badge)
+        card.paste(cur_badge, (av_x + av_size - 40, av_y + av_size - 40), cur_badge)
 
-    # --- 4. HEADER TEXT ---
-    name_x = av_x + av_size + 25
-    name_y = av_y + 15
+    # --- 4. CENTERED HEADER ---
     clean_cur = clean_rank_name(current_rank_raw)
-    draw.text((name_x, name_y), display_name, font=f_name, fill=(240, 240, 240, 255))
-    draw.text((name_x, name_y + 55), f"{clean_cur} · {p_title}",
-              font=f_rank, fill=(*rank_color, 210))
+    draw.text((W//2, av_y + av_size + 40), display_name, font=f_name, fill=(255, 255, 255), anchor="mm")
+    draw.text((W//2, av_y + av_size + 85), f"{clean_cur} · {p_title}", font=f_rank, fill=(*rank_color, 255), anchor="mm")
 
-    # --- 5. STATS SECTION (REPOSITIONED) ---
-    col1_x, row_y = 40, 210
-    
-    # Large Rating
-    draw.text((col1_x, row_y), "RATING", font=f_label, fill=(130, 133, 142, 255))
-    pts_str = str(pts)
-    draw.text((col1_x, row_y+20), pts_str, font=f_pts, fill=(*rank_color, 255))
+    # --- 5. MASSIVE STATS GRID ---
+    # Left: Huge Rating
+    draw.text((60, 360), "RATING", font=f_label, fill=(150, 150, 150))
+    draw.text((60, 385), str(pts), font=f_pts, fill=(*rank_color, 255))
 
-    # Record & Win Rate
-    col2_x = 320
+    # Right: Record and Streak
     total = wins + losses
     wr = round((wins / total) * 100) if total > 0 else 0
-    draw.text((col2_x, row_y), "RECORD", font=f_label, fill=(130, 133, 142, 255))
-    draw.text((col2_x, row_y+20), f"{wins}W {losses}L ({wr}%)", font=f_value, fill=(220, 220, 220, 255))
+    draw.text((360, 370), "RECORD", font=f_label, fill=(150, 150, 150))
+    draw.text((360, 400), f"{wins}W {losses}L", font=f_value, fill=(255, 255, 255))
     
-    # Streak
-    draw.text((col2_x, row_y+65), "STREAK", font=f_label, fill=(130, 133, 142, 255))
-    draw.text((col2_x, row_y+85), f"{streak} Win Streak", font=f_value, fill=(220, 220, 220, 255))
+    draw.text((360, 445), "STREAK", font=f_label, fill=(150, 150, 150))
+    draw.text((360, 475), f"{streak} 🔥", font=f_value, fill=(255, 165, 0)) # Orange for streak
 
-    # Signature Move
-    draw.text((col1_x, row_y + 110), "SIGNATURE MOVE", font=f_label, fill=(130, 133, 142, 255))
-    draw.text((col1_x, row_y + 130), p_move, font=f_value, fill=(220, 220, 220, 255))
+    # Signature Move (Bottom Left)
+    draw.text((60, 480), "SIGNATURE", font=f_label, fill=(150, 150, 150))
+    draw.text((60, 510), p_move, font=f_value, fill=(255, 255, 255))
 
-    # --- 6. CHONKY PROGRESS BAR ---
-    bar_y, bar_x = H - 100, 40
-    bar_w, bar_h = W - 140, 15
-    draw.rounded_rectangle([(bar_x, bar_y), (bar_x+bar_w, bar_y+bar_h)], radius=7, fill=(48, 50, 57, 255))
+    # --- 6. PROGRESS BAR ---
+    bar_x, bar_y = 60, 550
+    bar_w, bar_h = 480, 20 # Thicker bar
+    draw.rounded_rectangle([(bar_x, bar_y), (bar_x+bar_w, bar_y+bar_h)], radius=10, fill=(40, 40, 40))
     
     fill_w = int(bar_w * min(pct, 1.0))
-    if fill_w > 0:
-        draw.rounded_rectangle([(bar_x, bar_y), (bar_x+fill_w, bar_y+bar_h)], radius=7, fill=(*rank_color, 255))
+    if fill_w > 5:
+        draw.rounded_rectangle([(bar_x, bar_y), (bar_x+fill_w, bar_y+bar_h)], radius=10, fill=(*rank_color, 255))
 
-    # Next Rank Text
-    if next_rank_raw:
-        clean_next = clean_rank_name(next_rank_raw)
-        draw.text((bar_x, bar_y + 25), f"{int(pct*100)}% to {clean_next}", font=f_prog, fill=(150, 153, 162, 255))
-        
-        # Next Badge
-        next_badge = get_rank_badge(next_rank_raw, size=50)
-        if next_badge:
-            card.paste(next_badge, (bar_x + bar_w + 15, bar_y - 18), next_badge)
-
-    # Footer
-    draw.text((W // 2, H - 30), "Archive Arena · Season 1", font=f_footer, fill=(75, 77, 86, 255), anchor="mm")
+    # --- 7. BORDER ---
+    # This frames the whole card in the rank color
+    draw.rectangle([(0, 0), (W, H)], outline=(*rank_color, 255), width=10)
 
     buf = io.BytesIO()
     card.save(buf, 'PNG')
