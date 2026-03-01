@@ -11,7 +11,30 @@ TOKEN = os.environ["DISCORD_TOKEN"]
 LEADERBOARD_CHANNEL_ID = int(os.environ['LEADERBOARD_CHANNEL_ID'])
 LEADERBOARD_MSG_ID = 1476843531191717972 
 MOD_ROLE_ID = 123456789012345678  # <--- Ensure this is your Role ID
-DB_NAME = "arena_tracker.db"
+
+# --- Railway-Proof Database Logic ---
+# This looks for the variable you just set in the Railway dashboard
+# If it doesn't find it, it defaults to a local file (good for testing)
+DB_NAME = os.getenv("DB_PATH", "arena_tracker.db")
+
+def init_db():
+    # If the path includes a folder (like /data/), make sure the folder exists
+    db_dir = os.path.dirname(DB_NAME)
+    if db_dir and not os.path.exists(db_dir):
+        try:
+            os.makedirs(db_dir)
+        except OSError:
+            print(f"Directory {db_dir} could not be created. Using local root.")
+            # Fallback to local if Railway Volume isn't mounted yet
+            global DB_NAME
+            DB_NAME = "arena_tracker.db"
+
+    conn = sqlite3.connect(DB_NAME)
+    # ... rest of your table creation code ...
+    conn.commit()
+    conn.close()
+    print(f"Database active at: {DB_NAME}")
+    
 
 # --- Rank Config ---
 RANKS = [
