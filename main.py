@@ -18,7 +18,7 @@ from discord import ui
 # --- Config & Secrets ---
 TOKEN = os.environ["DISCORD_TOKEN"]
 LEADERBOARD_CHANNEL_ID = int(os.environ['LEADERBOARD_CHANNEL_ID'])
-MOD_ROLE_ID = 123456789012345678  # <--- Ensure this is your Role ID
+MOD_ROLE_ID = 1477213439586996285 # <--- Ensure this is your Role ID
 
 # --- Railway-Proof Database Logic ---
 # This looks for the variable you just set in the Railway dashboard
