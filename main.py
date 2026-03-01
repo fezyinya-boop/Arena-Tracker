@@ -335,87 +335,76 @@ async def setprofile(ctx, field: str, *, value: str):
     
     await ctx.send(f"✅ Your **{field}** has been updated to: `{value}`")
     
+(name="📜 Title", value=f"*{p_title}*", inline=True)
+
+
 @bot.command()
 async def profile(ctx, member: discord.Member = None):
     member = member or ctx.author
     
-    # 1. Fetch Data from both tables
+    # 1. Fetch data from both tables
+    # data format: (0:id, 1:name, 2:pts, 3:wins, 4:losses, 5:streak, 6:history)
+    data = get_or_create_user(member.id, member.display_name)
+    pts = data[2]
+
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    
-    # Get Stats (Default to 1000 RP if new)
-    c.execute("SELECT points, wins, losses, streak FROM users WHERE user_id = ?", (str(member.id),))
-    stats = c.fetchone() or (1000, 0, 0, 0)
-    
-    # Get RPG Bio (Default if no profile set)
     c.execute("SELECT title, signature_move, embed_color FROM profiles WHERE user_id = ?", (str(member.id),))
     bio = c.fetchone() or ("Aspirant", "None", None)
     conn.close()
 
-    pts, wins, losses, streak = stats
     p_title, p_move, p_color = bio
 
-    # 2. Rank & Progress Logic (The !rank Sync)
-    current_rank = RANKS[0]
-    next_rank = None
-    
-    for i, r in enumerate(RANKS):
-        if pts >= r['min']:
-            current_rank = r
-            if i + 1 < len(RANKS):
-                next_rank = RANKS[i+1]
-            else:
-                next_rank = None
+    # 2. Match the !rank Logic exactly
+    r_info = get_rank_info(pts)
+    rank_emoji = r_info['name'].split(' ')[0]
 
-    rank_emoji = current_rank['name'].split(' ')[0]
+    # Find next rank using your exact generator logic
+    next_rank = next((r for r in reversed(RANKS) if r['min'] > pts), None)
 
-    # 3. Build the Embed
-    # Handle custom color or default to current rank color
+    if next_rank:
+        total_needed = next_rank['min'] - r_info['min']
+        current_progress = pts - r_info['min']
+        
+        # Calculate for 10-segment bar and 0-100 percentage
+        percent_int = min(max(int((current_progress / total_needed) * 10), 0), 10)
+        bar = "▰" * percent_int + "▱" * (10 - percent_int)
+        perc_text = int((current_progress / total_needed) * 100)
+        
+        # Extract just the rank name without emoji for the text
+        next_label = next_rank['name'].split(' ')[-1]
+        prog_display = f"{bar} {perc_text}% to **{next_label}**"
+    else:
+        prog_display = "▰▰▰▰▰▰▰▰▰▰ **ASCENDED**"
+
+    # 3. Build the RPG Embed
     try:
-        color_value = int(p_color, 16) if p_color else current_rank["color"]
+        color_value = int(p_color, 16) if p_color else r_info["color"]
     except:
-        color_value = current_rank["color"]
+        color_value = r_info["color"]
 
     embed = discord.Embed(title=f"{rank_emoji} {member.display_name}", color=color_value)
     
-    # RPG Section
+    # RPG Identity
     embed.add_field(name="📜 Title", value=f"*{p_title}*", inline=True)
     embed.add_field(name="✨ Signature Move", value=f"**{p_move}**", inline=True)
 
     # Stats Section
-    wr = round((wins / (wins + losses)) * 100) if (wins + losses) > 0 else 0
+    total_games = data[3] + data[4]
+    wr = round((data[3] / total_games) * 100) if total_games > 0 else 0
+    
     embed.add_field(name="🏆 Rating", value=f"`{pts} RP`", inline=True)
-    embed.add_field(name="⚔️ Record", value=f"{wins}W - {losses}L ({wr}%)", inline=True)
-    embed.add_field(name="🔥 Streak", value=f"{streak} Win Streak", inline=True)
+    embed.add_field(name="⚔️ Record", value=f"{data[3]}W - {data[4]}L ({wr}%)", inline=True)
+    embed.add_field(name="🔥 Streak", value=f"{data[5]} Win Streak", inline=True)
 
-    # 4. The Progress Bar (Exact !rank Logic)
-    if next_rank:
-        target_label = next_rank['name'].split(' ')[-1]
-        
-        # Calculate tier requirements
-        total_needed_in_tier = next_rank['min'] - current_rank['min']
-        current_progress_in_tier = pts - current_rank['min']
-        
-        # Calculate percentages and blocks
-        # We use max(..., 0) to ensure starting at 1000 RP doesn't break the math
-        percent = min(max(int((current_progress_in_tier / total_needed_in_tier) * 100), 0), 100)
-        filled_blocks = min(max(int((current_progress_in_tier / total_needed_in_tier) * 10), 0), 10)
-        
-        bar = "▰" * filled_blocks + "▱" * (10 - filled_blocks)
-        prog_display = f"{bar} {percent}% to **{target_label}**"
-    else:
-        # Only shows if they have cleared the highest 'min' in RANKS
-        prog_display = "▰▰▰▰▰▰▰▰▰▰ **ASCENDED**"
-
+    # 4. Progress Bar at the Bottom
     embed.add_field(name="🚀 Rank Progress", value=prog_display, inline=False)
     
-    # Visuals
     embed.set_thumbnail(url=member.display_avatar.url)
     embed.set_footer(text="Archive Arena | Season 1")
 
-    await ctx
-
-
+    await ctx.send(embed=embed)
+    
     
 
 @bot.command()
