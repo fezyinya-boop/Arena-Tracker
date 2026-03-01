@@ -335,7 +335,6 @@ async def setprofile(ctx, field: str, *, value: str):
     
     await ctx.send(f"✅ Your **{field}** has been updated to: `{value}`")
     
-
 @bot.command()
 async def profile(ctx, member: discord.Member = None):
     member = member or ctx.author
@@ -353,20 +352,19 @@ async def profile(ctx, member: discord.Member = None):
     pts, wins, losses, streak = stats
     p_title, p_move, p_color = bio
 
-    # 2. Determine Rank & Progress
+    # 2. Improved Rank & Progress Logic
     current_rank = RANKS[0]
     next_rank = None
-    for i, r in enumerate(RANKS):
-        if pts >= r['min']:
-            current_rank = r
+    
+    for i in range(len(RANKS)):
+        if pts >= RANKS[i]['min']:
+            current_rank = RANKS[i]
             if i + 1 < len(RANKS):
                 next_rank = RANKS[i+1]
     
     rank_emoji = current_rank['name'].split(' ')[0]
-    rank_label = current_rank['name'].split(' ')[-1]
 
     # 3. Build the Embed
-    # Handle custom color or default to rank color
     try:
         color_value = int(p_color, 16) if p_color else current_rank["color"]
     except:
@@ -374,29 +372,33 @@ async def profile(ctx, member: discord.Member = None):
 
     embed = discord.Embed(title=f"{rank_emoji} {member.display_name}", color=color_value)
     
-    # RPG Header
+    # RPG Header (Tier Removed)
     embed.add_field(name="📜 Title", value=f"*{p_title}*", inline=True)
-    embed.add_field(name="🛡️ Tier", value=rank_label, inline=True)
-    embed.add_field(name="✨ Signature Move", value=f"**{p_move}**", inline=False)
+    embed.add_field(name="✨ Signature Move", value=f"**{p_move}**", inline=True)
 
     # Core Stats
     wr = round((wins / (wins + losses)) * 100) if (wins + losses) > 0 else 0
     embed.add_field(name="🏆 Rating", value=f"`{pts} RP`", inline=True)
     embed.add_field(name="⚔️ Record", value=f"{wins}W - {losses}L ({wr}%)", inline=True)
     
-    streak_display = f"🔥 {streak} Win Streak!" if streak >= 3 else f"{streak} Wins"
-    embed.add_field(name="⚡ Streak", value=streak_display, inline=True)
+    # Streak - Clean Flame Only
+    embed.add_field(name="🔥 Streak", value=f"{streak} Win Streak", inline=True)
 
-    # 4. Progress Bar at the Bottom
+    # 4. Progress Bar at the absolute bottom
     if next_rank:
         target_label = next_rank['name'].split(' ')[-1]
         range_total = next_rank['min'] - current_rank['min']
-        progress = pts - current_rank['min']
-        filled = min(max(int((progress / range_total) * 10), 0), 10)
+        
+        # Calculate progress within the current tier
+        progress_in_tier = pts - current_rank['min']
+        
+        # Ensure progress doesn't go negative or over 100% visually
+        filled = min(max(int((progress_in_tier / range_total) * 10), 0), 10)
         bar = "▰" * filled + "▱" * (10 - filled)
-        perc = int((progress / range_total) * 100)
+        perc = int((progress_in_tier / range_total) * 100)
         prog_display = f"{bar} {perc}% to **{target_label}**"
     else:
+        # Only shows if they are actually above the highest rank min
         prog_display = "▰▰▰▰▰▰▰▰▰▰ **MAX RANK REACHED**"
 
     embed.add_field(name="🚀 Rank Progress", value=prog_display, inline=False)
@@ -405,9 +407,7 @@ async def profile(ctx, member: discord.Member = None):
     embed.set_footer(text="Archive Arena Season 1")
 
     await ctx.send(embed=embed)
-
     
-
 
 @bot.command()
 @commands.has_permissions(administrator=True)
