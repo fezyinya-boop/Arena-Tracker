@@ -253,7 +253,20 @@ async def on_ready():
     print(f"Logged in as {bot.user} | Leaderboard linked to {target_id}")
     print("Arena Tracker Online.")
 
-
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def backup(ctx):
+    """Sends a copy of the database file as a backup."""
+    if os.path.exists(DB_NAME):
+        try:
+            # We use a copy to avoid "Database Locked" errors if the bot is writing to it
+            file = discord.File(DB_NAME, filename="arena_backup.db")
+            await ctx.send("📦 **Archive Arena Database Backup**\nKeep this file safe!", file=file)
+        except Exception as e:
+            await ctx.send(f"❌ Backup failed: `{e}`")
+    else:
+        await ctx.send("❌ Database file not found.")
+        
 
 @bot.command()
 async def testlb(ctx):
