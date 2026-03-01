@@ -6,6 +6,7 @@ import asyncio
 import math
 import random
 from profile_card import make_profile_card, fetch_avatar
+from leaderboard_gen import make_leaderboard_image
 
 # --- Config & Secrets ---
 TOKEN = os.environ["DISCORD_TOKEN"]
@@ -291,6 +292,27 @@ async def update_leaderboard():
 async def on_ready():
     init_db()
     print("Arena Tracker Online.")
+
+@bot.command()
+async def testlb(ctx):
+    # Dummy data to see how the Triple-Font stack looks
+    test_players = [
+        {"name": "Krona", "pts": 1095, "rank_color": (255, 165, 0)},   # Gold/Orange
+        {"name": "Shadow_Player", "pts": 950, "rank_color": (192, 192, 192)}, # Silver
+        {"name": "Gothic_Knight", "pts": 820, "rank_color": (205, 127, 50)}, # Bronze
+        {"name": "Trial_User", "pts": 450, "rank_color": (100, 100, 100)}     # Grey
+    ]
+
+    # Generate the image using the new PIL function
+    try:
+        image_buf = make_leaderboard_image(test_players)
+        
+        # Send it as a file
+        file = discord.File(fp=image_buf, filename="test_leaderboard.png")
+        await ctx.send("📊 **Arena Test Leaderboard**", file=file)
+    except Exception as e:
+        await ctx.send(f"❌ Error generating leaderboard: {e}")
+        
 
 @bot.command()
 async def setprofile(ctx, field: str, *, value: str):
