@@ -1046,57 +1046,50 @@ tournament_players = []  # List of member objects
 tournament_active = False
 tournament_bracket = []  # List of match dictionaries
 
-
-@bot.command(name="payout_rules", aliases=["tourny_rules", "payouts"])
-async def payout_rules_cmd(ctx):
-    """Displays official tournament and Cash App payout rules."""
+@bot.command(name="payout_info", aliases=["payouts", "tourney"]) 
+async def payout_info(ctx):
+    """Displays tournament structure and the private registration process."""
     embed = discord.Embed(
-        title="🏆 ARCHIVE ARENA: TOURNAMENT PROTOCOL",
+        title="🏆 ARCHIVE ARENA: TOURNAMENT & PAYOUTS",
         description=(
-            "All participants must follow these rules for guaranteed payouts. "
-            "Failure to comply may result in disqualification."
+            "Follow these steps to ensure you are eligible for prizes. "
+            "Failure to comply results in an automatic DQ."
         ),
         color=0x00D632 # Cash App Green
     )
 
     # --- THE REGISTRATION PROCESS ---
     embed.add_field(
-        name="📝 HOW TO GET PAID (INTERNAL REGISTRATION)",
+        name="📝 HOW TO LINK YOUR CASH APP",
         value=(
-            "To receive your prize, you must link your Cash App handle to your profile:\n"
+            "To get paid, you must link your handle to our internal database:\n"
             "1. Type **`!register $YourTag`** (e.g., `!register $ArchiveKing`).\n"
-            "2. **PRIVACY:** Your $Cashtag is **NOT** visible to other users or on your public profile card.\n"
-            "3. **STAFF ACCESS:** Only authorized Moderators can view your tag for the purpose of prize distribution."
+            "2. **PRIVACY:** This is **NOT** shown on your public profile card.\n"
+            "3. **ACCESS:** Only Moderators can see this to send your prize money."
         ),
         inline=False
     )
 
-    # --- MATCH EXECUTION ---
+    # --- MATCH & PAYOUT RULES ---
     embed.add_field(
-        name="⚔️ MATCH EXECUTION",
+        name="📲 PAYOUT POLICIES",
         value=(
-            "• **Bot Validation:** Matches must start via `!duel`. No 'off-record' games.\n"
-            "• **Reporting:** Use the bot buttons immediately after the match.\n"
-            "• **Disputes:** Screenshots/Video are **required** for proof. If a dispute "
-            "occurs, a Moderator will review and `!settle` it."
+            "• **Accuracy:** We are not responsible for typos. Double-check your tag!\n"
+            "• **Claim Period:** You have 24 hours post-tourney to have a tag registered.\n"
+            "• **Validation:** Matches must use `!duel`. No off-record games allowed."
         ),
         inline=False
     )
 
-    # --- PAYOUT RULES ---
     embed.add_field(
-        name="📲 CASH APP PAYOUTS",
-        value=(
-            "• **Accuracy:** Ensure your $Cashtag is correct. We are not responsible for "
-            "funds sent to the wrong user due to typos.\n"
-            "• **Claim Window:** You must have a tag registered within 24 hours of "
-            "the tournament ending."
-        ),
+        name="⚖️ DISPUTES",
+        value=f"Screenshots are required. A <@&{MOD_ROLE_ID}> will `!settle` any conflicts.",
         inline=False
     )
 
-    embed.set_footer(text="Archive Arena • Secure Payout System")
+    embed.set_footer(text="Archive Arena • Secure Internal Payouts")
     await ctx.send(embed=embed)
+    
 
 
     
