@@ -7,6 +7,9 @@ import math
 import random
 from profile_card import make_profile_card, fetch_avatar
 from leaderboard_gen import make_leaderboard_image
+from flask import Flask, jsonify
+from flask_cors import CORS
+
 
 # --- Config & Secrets ---
 TOKEN = os.environ["DISCORD_TOKEN"]
