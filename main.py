@@ -399,6 +399,40 @@ async def fix_database(ctx):
         await ctx.send(f"❌ Error patching database: {e}")
     finally:
         conn.close()
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def sync_rpg(ctx):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    try:
+        # 1. Create the Profiles table for !setprofile and !profile
+        c.execute('''CREATE TABLE IF NOT EXISTS profiles 
+                     (user_id TEXT PRIMARY KEY, 
+                      title TEXT DEFAULT 'Aspirant', 
+                      signature_move TEXT DEFAULT 'None', 
+                      class_name TEXT DEFAULT 'Freelancer', 
+                      embed_color TEXT)''')
+        
+        # 2. Add 'streak' to users if missing
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN streak INTEGER DEFAULT 0")
+        except:
+            pass 
+
+        # 3. Add 'history' to users if missing
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN history TEXT DEFAULT ''")
+        except:
+            pass
+            
+        conn.commit()
+        await ctx.send("✅ **RPG System Initialized!** The `profiles` table is now active and stats are synced.")
+    except Exception as e:
+        await ctx.send(f"❌ Database Sync Error: {e}")
+    finally:
+        conn.close()
+        
         
 
 @bot.command()
