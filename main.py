@@ -911,11 +911,9 @@ async def settle(ctx, winner: discord.Member, loser: discord.Member):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
 
-    # 1. FORCE FIND the disputed match
-    # We don't care about what they reported (p1_report/p2_report)
-    # We just find the most recent 'active' match involving both players.
+    # 1. DATABASE CLEANUP: Find and close any 'active' match between these two
     c.execute("""
-        SELECT id, p1_id, p1_deck, p2_id, p2_deck FROM matches 
+        SELECT id, p1_deck, p2_deck FROM matches 
         WHERE ((p1_id = ? AND p2_id = ?) OR (p1_id = ? AND p2_id = ?))
         AND status = 'active'
         ORDER BY timestamp DESC LIMIT 1
@@ -924,46 +922,50 @@ async def settle(ctx, winner: discord.Member, loser: discord.Member):
     match_row = c.fetchone()
 
     if match_row:
-        match_id, p1_id, p1_deck, p2_id, p2_deck = match_row
-        
-        # 2. RESOLVE THE META
-        # The Judge's 'winner' argument determines the winner_id for the stats
+        match_id, d1, d2 = match_row
+        # Mark the match as completed and assign the winner for !meta stats
         c.execute("UPDATE matches SET winner_id = ?, status = 'completed' WHERE id = ?", 
                   (str(winner.id), match_id))
         conn.commit()
-        match_info = f"⚖️ Dispute resolved: **{p1_deck} vs {p2_deck}** recorded."
+        meta_note = f"✅ Matchup **{d1} vs {d2}** recorded in meta stats."
     else:
-        match_info = "⚠️ Warning: No active match found. RP adjusted manually, but no meta data recorded."
+        meta_note = "⚠️ No active match found in DB. RP adjusted manually (no meta data recorded)."
 
-    # 3. THE ELO MATH (Your original logic)
+    # 2. RP CALCULATION (ELO Logic)
     w_data = get_or_create_user(winner.id, winner.display_name)
     l_data = get_or_create_user(loser.id, loser.display_name)
-    r1, r2 = w_data[2], l_data[2]
     
-    # ELO Calculation: $pts = 32 * (1 - \frac{1}{1 + 10^{(r2-r1)/400}})$
+    r1, r2 = w_data[2], l_data[2]
+    # Standard ELO formula: pts = K * (1 - expected_score)
     pts = round(32 * (1 - (1 / (1 + 10 ** ((r2 - r1) / 400)))))
     
-    # 4. UPDATE STATS & ROLES
+    # 3. UPDATE USER STATS
     w_hist = w_data[6].split(",") if w_data[6] else []
     l_hist = l_data[6].split(",") if l_data[6] else []
+    
     w_hist.append(f"W:{loser.display_name}:{pts}")
     l_hist.append(f"L:{winner.display_name}:{pts}")
 
-    update_user_stats(winner.id, r1+pts, w_data[3]+1, w_data[4], w_data[5]+1, w_hist)
-    update_user_stats(loser.id, r2-pts, l_data[3], l_data[4]+1, 0, l_hist)
+    # Winner: +Points, +Wins, +Streak
+    update_user_stats(winner.id, r1 + pts, w_data[3] + 1, w_data[4], w_data[5] + 1, w_hist)
+    # Loser: -Points, +Losses, Reset Streak
+    update_user_stats(loser.id, r2 - pts, l_data[3], l_data[4] + 1, 0, l_hist)
     
     conn.close()
 
-    await update_player_role(winner, r1+pts)
-    await update_player_role(loser, r2-pts)
+    # 4. DISCORD UPDATES (Roles & Leaderboard)
+    await update_player_role(winner, r1 + pts)
+    await update_player_role(loser, r2 - pts)
     await refresh_leaderboard(ctx.guild)
     
-    # 5. JUDGE VERDICT EMBED
-    embed = discord.Embed(title="⚖️ JUDGE VERDICT (DISPUTE RESOLVED)", color=0xe74c3c)
-    embed.description = f"**{winner.display_name}** is confirmed the winner over **{loser.display_name}**."
+    # 5. VERDICT EMBED
+    embed = discord.Embed(title="⚖️ JUDGE VERDICT", color=0xe74c3c)
+    embed.description = f"**{winner.display_name}** has been awarded victory over **{loser.display_name}**."
     embed.add_field(name="RP SHIFT", value=f"📈 {winner.display_name}: `+{pts}`\n📉 {loser.display_name}: `-{pts}`")
-    embed.set_footer(text=match_info)
+    embed.set_footer(text=meta_note)
+    
     await ctx.send(embed=embed)
+    
     
     
 
