@@ -786,20 +786,7 @@ async def duel(ctx, opponent: discord.Member):
     embed.set_footer(text="Arena Tracker • Awaiting Response")
     await ctx.send(embed=embed, view=view)
 
-@bot.command()
-@commands.has_role(MOD_ROLE_ID) # Only mods can see payment info
-async def payout(ctx, member: discord.Member):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT cashtag FROM profiles WHERE user_id = ?", (str(member.id),))
-    row = c.fetchone()
-    conn.close()
 
-    if row and row[0]:
-        await ctx.send(f"💸 **Payout Info for {member.display_name}:** `{row[0]}`")
-    else:
-        await ctx.send(f"❌ {member.display_name} has not registered a $Cashtag yet.")
-        
 
 
 @bot.command()
