@@ -434,6 +434,21 @@ async def on_ready():
 
     print(f'Logged in as {bot.user.name}')
     print('Status: Arena Meta Tracker is Online.')
+
+    # --- DATABASE REPAIR BLOCK ---
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    try:
+        # This adds the missing variable (column) to your existing table
+        c.execute("ALTER TABLE profiles ADD COLUMN cashtag TEXT")
+        conn.commit()
+        print("✅ Database Repair: 'cashtag' column added successfully.")
+    except sqlite3.OperationalError:
+        # This prevents an error if the column is already there
+        print("ℹ️ Database Check: 'cashtag' column already exists.")
+    finally:
+        conn.close()
+    # --- END OF REPAIR ---
     
     # Set the bot's "Watching" status
     await bot.change_presence(activity=discord.Activity(
