@@ -76,17 +76,6 @@ RANKS = [
     {"name": "<:rookie:1476994147935322265> BRONZE", "min": 0, "color": 0xcd7f32}
 ]
 
-
-# --- Database Setup ---
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (user_id TEXT PRIMARY KEY, name TEXT, points INTEGER, 
-                  wins INTEGER, losses INTEGER, streak INTEGER, history TEXT)''')
-    conn.commit()
-    conn.close()
-
  #3.DATABASE HELPER (Block 1)
 def get_or_create_user(user_id, name):
     conn = sqlite3.connect(DB_NAME)
@@ -134,9 +123,6 @@ async def update_player_role(member, points):
         await member.remove_roles(*to_remove)
         await member.add_roles(role)
 
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.command()
 async def ranks(ctx):
