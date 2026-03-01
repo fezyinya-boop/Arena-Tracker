@@ -420,38 +420,44 @@ async def refresh_leaderboard(guild):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # 1. Pull Top 10 from DB
-    c.execute("SELECT name, points, wins, losses FROM users ORDER BY points DESC LIMIT 10")
+    # 1. Fetch Top 10
+    c.execute("SELECT name, points, streak FROM users ORDER BY points DESC LIMIT 10")
     top_players = c.fetchall()
     
-    # 2. Check if we already have a pinned message ID
     c.execute("SELECT value FROM config WHERE key = 'leaderboard_msg_id'")
     row = c.fetchone()
     saved_msg_id = int(row[0]) if row else None
     conn.close()
 
-    # 3. Build the Visuals
     embed = discord.Embed(title="⚔️ ARCHIVE ARENA: TOP 10", color=0xFFD700)
-    desc = ""
-    for i, (name, pts, wins, losses) in enumerate(top_players, 1):
-        medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "🔹"
-        desc += f"{medal} **{name}** — `{pts} RP` ({wins}W-{losses}L)\n"
     
-    embed.description = desc or "The arena is currently empty."
-    embed.set_footer(text="Updates automatically after matches | !rank")
+    leaderboard_text = ""
+    for i, (name, pts, streak) in enumerate(top_players, 1):
+        # Determine Rank using your custom RANKS list
+        # We look for the highest 'min' value that is <= the player's points
+        current_rank_name = "UNRANKED"
+        for rank in reversed(RANKS):
+            if pts >= rank['min']:
+                current_rank_name = rank['name']
+                break
+        
+        # Fire Emoji for 3+ Win Streak
+        streak_flare = " 🔥" if streak >= 3 else ""
+        
+        # Format: 1. <emoji> RANK Name 🔥 — 1200 RP
+        leaderboard_text += f"**{i}.** {current_rank_name} **{name}**{streak_flare} — `{pts} RP`\n"
 
-    # 4. Get the Channel (Using your Rails Variable)
+    embed.description = leaderboard_text or "The arena is silent... post a match to begin."
+    embed.set_footer(text="Updates automatically | Use !rank to see your progress")
+
     channel = guild.get_channel(LEADERBOARD_CHANNEL_ID)
-    if not channel:
-        return print(f"Couldn't find channel {LEADERBOARD_CHANNEL_ID}")
+    if not channel: return
 
     try:
         if saved_msg_id:
-            # Edit the existing message
             msg = await channel.fetch_message(saved_msg_id)
             await msg.edit(embed=embed)
         else:
-            # First time setup: Send and save the ID
             new_msg = await channel.send(embed=embed)
             conn = sqlite3.connect(DB_NAME)
             c = conn.cursor()
@@ -459,13 +465,8 @@ async def refresh_leaderboard(guild):
             conn.commit()
             conn.close()
     except Exception as e:
-        print(f"Leaderboard error: {e}")
-        # If the message was deleted manually, clear the ID to reset
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute("DELETE FROM config WHERE key = 'leaderboard_msg_id'")
-        conn.commit()
-        conn.close()
+        print(f"Leaderboard Refresh Error: {e}")
+
 
     
 
