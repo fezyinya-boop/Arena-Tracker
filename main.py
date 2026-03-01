@@ -40,6 +40,11 @@ def init_db():
     
     # Leaderboard Configuration Table (Crucial for the auto-update feature)
     c.execute('''CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)''')
+
+    # Profile Customization Table
+    c.execute('''CREATE TABLE IF NOT EXISTS profiles 
+                 (user_id TEXT PRIMARY KEY, title TEXT, signature_move TEXT, 
+                  class_name TEXT, embed_color TEXT)''')
     
     conn.commit()
     conn.close()
@@ -300,6 +305,79 @@ bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 async def on_ready():
     init_db()
     print("Arena Tracker Online.")
+
+@bot.command()
+async def setprofile(ctx, field: str, *, value: str):
+    """Usage: !setprofile move Shadow Realm Strike | !setprofile class Assassin"""
+    valid_fields = {
+        "move": "signature_move",
+        "title": "title",
+        "class": "class_name",
+        "color": "embed_color"
+    }
+    
+    field = field.lower()
+    if field not in valid_fields:
+        return await ctx.send(f"❌ Invalid field. Use: `move`, `title`, `class`, or `color` (hex).")
+
+    # Basic Hex validation for color
+    if field == "color" and not value.startswith("0x"):
+        return await ctx.send("❌ Colors must be in hex format (e.g., `0xff0000` for red).")
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # Ensure entry exists
+    c.execute("INSERT OR IGNORE INTO profiles (user_id) VALUES (?)", (str(ctx.author.id),))
+    # Update the specific field
+    c.execute(f"UPDATE profiles SET {valid_fields[field]} = ? WHERE user_id = ?", (value, str(ctx.author.id)))
+    conn.commit()
+    conn.close()
+    
+    await ctx.send(f"✅ Your **{field}** has been updated to: `{value}`")
+    
+
+@bot.command()
+async def profile(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    
+    # 1. Fetch Data from both tables
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT points, wins, losses, streak FROM users WHERE user_id = ?", (str(member.id),))
+    stats = c.fetchone() or (1000, 0, 0, 0)
+    
+    c.execute("SELECT title, signature_move, class_name, embed_color FROM profiles WHERE user_id = ?", (str(member.id),))
+    bio = c.fetchone() or ("Aspirant", "None", "Freelancer", None)
+    conn.close()
+
+    pts, wins, losses, streak = stats
+    p_title, p_move, p_class, p_color = bio
+
+    # 2. Determine Rank (Same logic as before)
+    current_rank = next((r for r in reversed(RANKS) if pts >= r['min']), RANKS[0])
+    rank_emoji = current_rank['name'].split(' ')[0]
+    
+    # 3. Build the Embed
+    # Use custom color if set, otherwise use Rank color
+    color_value = int(p_color, 16) if p_color else current_rank["color"]
+    embed = discord.Embed(title=f"{rank_emoji} {member.display_name}", color=color_value)
+    
+    # RPG Identity Section
+    embed.add_field(name="📜 Title", value=f"*{p_title}*", inline=True)
+    embed.add_field(name="🎭 Class", value=p_class, inline=True)
+    embed.add_field(name="✨ Signature Move", value=f"**{p_move}**", inline=False)
+
+    # Core Stats Section
+    wr = round((wins / (wins + losses)) * 100) if (wins + losses) > 0 else 0
+    embed.add_field(name="🏆 Rating", value=f"`{pts} RP`", inline=True)
+    embed.add_field(name="⚔️ Win Rate", value=f"{wr}%", inline=True)
+    embed.add_field(name="🔥 Streak", value=f"{streak} Wins", inline=True)
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"Season 1 Archive | Global ID: {member.id}")
+
+    await ctx.send(embed=embed)
+    
 
 
 @bot.command()
