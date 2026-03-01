@@ -4,11 +4,11 @@ import io
 import os
 import re
 
-# --- FONT LOADER ---
 def load_safe_font(size):
-    font_path = "./fonts/DejaVuSans-Bold.ttf"
+    font_path = os.path.join(os.path.dirname(__file__), "fonts", "DejaVuSans-Bold.ttf")
     if os.path.exists(font_path):
         return ImageFont.truetype(font_path, size)
+    print("⚠️ Font not found, using default!")
     return ImageFont.load_default()  # fallback
 
 # --- Badges ---
