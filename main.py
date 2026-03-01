@@ -41,7 +41,7 @@ def init_db():
     
     # User Statistics & Match History
     c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (user_id TEXT PRIMARY KEY, name TEXT, points INTEGER, 
+                 (user_id TEXT PRIMARY KEY, name TEXT, cashtag TEXT, points INTEGER, 
                   wins INTEGER, losses INTEGER, streak INTEGER, history TEXT)''')
     
     # Leaderboard & Bot Configuration
@@ -364,6 +364,30 @@ async def ranks(ctx):
     
     await ctx.send(embed=embed)
 
+@bot.command()
+async def register(ctx, tag: str):
+    """Link your $Cashtag to your profile for tournament payouts."""
+    # Basic validation to ensure they include the $
+    if not tag.startswith('$'):
+        return await ctx.send("❌ Invalid format. Please include the `$` (e.g., `!register $YourName`).")
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # Check if profile exists, if not create it
+    c.execute("INSERT OR IGNORE INTO profiles (user_id) VALUES (?)", (str(ctx.author.id),))
+    # Update the cashtag
+    c.execute("UPDATE profiles SET cashtag = ? WHERE user_id = ?", (tag, str(ctx.author.id)))
+    conn.commit()
+    conn.close()
+
+    embed = discord.Embed(
+        title="✅ REGISTRATION SUCCESSFUL",
+        description=f"Your payout handle has been set to **{tag}**.\n\n*If you ever need to change this, just run the command again.*",
+        color=0x00D632
+    )
+    await ctx.send(embed=embed)
+    
+
 
 @bot.command()
 async def meta(ctx):
@@ -439,6 +463,59 @@ async def on_ready():
         type=discord.ActivityType.watching, 
         name="Arena Tracker is Online"
     ))
+
+@bot.command(aliases=['rules', 'payouts'])
+async def tourny_rules(ctx):
+    """Displays the official Cash App tournament and payout rules."""
+    embed = discord.Embed(
+        title="🏆 ARCHIVE ARENA: TOURNAMENT PROTOCOL",
+        description=(
+            "All participants must follow these rules to ensure a fair bracket and "
+            "guaranteed payouts. Failure to comply may result in a DQ."
+        ),
+        color=0x00D632 # Cash App Green
+    )
+
+    embed.add_field(
+        name="📲 CASH APP PAYOUTS",
+        value=(
+            "• **Primary Method:** All prizes are sent via **Cash App**.\n"
+            "• **Cashtag Accuracy:** You must provide your correct **$Cashtag**. "
+            "We are not responsible for funds sent to the wrong user due to typos.\n"
+            "• **Claim Window:** Winners must DM a Moderator their tag within 24 hours. "
+            "Prizes unclaimed after 7 days are returned to the prize pool."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="⚔️ MATCH EXECUTION",
+        value=(
+            "• **Bot Validation:** Matches must start via `!duel`. No 'off-record' games.\n"
+            "• **Reporting:** Use the bot buttons immediately after the match. "
+            "Intentional false reporting is an instant ban.\n"
+            "• **Disputes:** Screenshots/Video are **required** for proof. If a dispute "
+            "occurs, a <@&" + str(MOD_ROLE_ID) + "> will review and `!settle` it."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="🚫 INTEGRITY & CONDUCT",
+        value=(
+            "• **No Collusion:** Pot-splitting or throwing matches is a permanent DQ.\n"
+            "• **Disconnects:** You have 3 minutes to reconnect before forfeiting the game.\n"
+            "• **Respect:** Zero tolerance for toxicity in match-chat or DMs."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="Archive Arena • Official Competitive Standard")
+    # Optional: If you have a Cash App or Trophy icon URL, put it here:
+    # embed.set_thumbnail(url="IMAGE_URL_HERE")
+
+    await ctx.send(embed=embed)
+    
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -628,10 +705,10 @@ async def profile(ctx, member: discord.Member = None):
     # 2. Fetch data from profiles table
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT title, signature_move, embed_color FROM profiles WHERE user_id = ?", (str(member.id),))
+    c.execute("SELECT title, embed_color , signature_move, cashtag FROM profiles WHERE user_id = ?", (str(member.id),))
     bio = c.fetchone() or ("Aspirant", "None", None)
     conn.close()
-    p_title, p_move, p_color = bio
+    p_title, p_move, p_color, p_cashtag = bio
 
     # 3. Rank Logic (The exact !rank sync)
     r_info = get_rank_info(pts) # Gets your current rank dict
@@ -787,6 +864,21 @@ async def duel(ctx, opponent: discord.Member):
     )
     embed.set_footer(text="Arena Tracker • Awaiting Response")
     await ctx.send(embed=embed, view=view)
+
+@bot.command()
+@commands.has_role(MOD_ROLE_ID) # Only mods can see payment info
+async def payout(ctx, member: discord.Member):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT cashtag FROM profiles WHERE user_id = ?", (str(member.id),))
+    row = c.fetchone()
+    conn.close()
+
+    if row and row[0]:
+        await ctx.send(f"💸 **Payout Info for {member.display_name}:** `{row[0]}`")
+    else:
+        await ctx.send(f"❌ {member.display_name} has not registered a $Cashtag yet.")
+        
 
 
 @bot.command()
