@@ -340,80 +340,63 @@ async def setprofile(ctx, field: str, *, value: str):
 async def profile(ctx, member: discord.Member = None):
     member = member or ctx.author
     
-    # 1. Fetch data from both tables
-    # data format: (0:id, 1:name, 2:pts, 3:wins, 4:losses, 5:streak, 6:history)
+    # 1. Fetch data from users table
+    # Expected: (id, name, pts, wins, losses, streak, history)
     data = get_or_create_user(member.id, member.display_name)
     pts = data[2]
 
+    # 2. Fetch data from profiles table
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("SELECT title, signature_move, embed_color FROM profiles WHERE user_id = ?", (str(member.id),))
     bio = c.fetchone() or ("Aspirant", "None", None)
     conn.close()
-
     p_title, p_move, p_color = bio
 
-    # 2. Match the !rank Logic exactly
-    r_info = get_rank_info(pts)
+    # 3. Rank Logic (The exact !rank sync)
+    r_info = get_rank_info(pts) # Gets your current rank dict
     rank_emoji = r_info['name'].split(' ')[0]
 
-    # Find next rank using your exact generator logic
+    # Find next rank
     next_rank = next((r for r in reversed(RANKS) if r['min'] > pts), None)
 
+    # 4. Progress Bar with Emoji Target
     if next_rank:
+        next_emoji = next_rank['name'].split(' ')[0]
         total_needed = next_rank['min'] - r_info['min']
         current_progress = pts - r_info['min']
         
-        # Calculate for 10-segment bar and 0-100 percentage
         percent_int = min(max(int((current_progress / total_needed) * 10), 0), 10)
         bar = "▰" * percent_int + "▱" * (10 - percent_int)
         perc_text = int((current_progress / total_needed) * 100)
         
-        # Extract just the rank name without emoji for the text
-        next_label = next_rank['name'].split(' ')[-1]
-        prog_display = f"{bar} {perc_text}% to **{next_label}**"
+        prog_display = f"{bar} {perc_text}% to {next_emoji}"
     else:
-        prog_display = "▰▰▰▰▰▰▰▰▰▰ **ASCENDED**"
+        prog_display = "▰▰▰▰▰▰▰▰▰▰ **MAX RANK REACHED**"
 
-    # 3. Build the RPG Embed
+    # 5. Build the Embed
     try:
         color_value = int(p_color, 16) if p_color else r_info["color"]
     except:
         color_value = r_info["color"]
 
     embed = discord.Embed(title=f"{rank_emoji} {member.display_name}", color=color_value)
-    
-    # RPG Identity
     embed.add_field(name="📜 Title", value=f"*{p_title}*", inline=True)
     embed.add_field(name="✨ Signature Move", value=f"**{p_move}**", inline=True)
 
-    # Stats Section
     total_games = data[3] + data[4]
     wr = round((data[3] / total_games) * 100) if total_games > 0 else 0
     
     embed.add_field(name="🏆 Rating", value=f"`{pts} RP`", inline=True)
     embed.add_field(name="⚔️ Record", value=f"{data[3]}W - {data[4]}L ({wr}%)", inline=True)
     embed.add_field(name="🔥 Streak", value=f"{data[5]} Win Streak", inline=True)
-
-        # 4. Progress Bar with Emoji Target
-    if next_rank:
-        # Extract the emoji from the next rank's name (e.g., "<:Silver:123...> ")
-        next_emoji = next_rank['name'].split(' ')[0]
-        
-        total_needed = next_rank['min'] - r_info['min']
-        current_progress = pts - r_info['min']
-        
-        # Calculate for 10-segment bar and percentage
-        percent_int = min(max(int((current_progress / total_needed) * 10), 0), 10)
-        bar = "▰" * percent_int + "▱" * (10 - percent_int)
-        perc_text = int((current_progress / total_needed) * 100)
-        
-        # Using the emoji instead of the name string
-        prog_display = f"{bar} {perc_text}% to {next_emoji}"
-    else:
-        prog_display = "▰▰▰▰▰▰▰▰▰▰ **MAX RANK REACHED**"
-
     embed.add_field(name="🚀 Rank Progress", value=prog_display, inline=False)
+    
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text="Archive Arena | Season 1")
+
+    await ctx.send(embed=embed)
+
 
     
     
