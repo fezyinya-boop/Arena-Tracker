@@ -278,7 +278,7 @@ async def testlb(ctx):
 
 @bot.command()
 async def setprofile(ctx, field: str, *, value: str):
-    """Usage: !setprofile move Shadow Realm Strike | !setprofile class Assassin"""
+    """Usage: !setprofile move Shadow Realm Strike | !setprofile title Shadow King"""
     valid_fields = {
         "move": "signature_move",
         "title": "title",
@@ -287,17 +287,14 @@ async def setprofile(ctx, field: str, *, value: str):
     
     field = field.lower()
     if field not in valid_fields:
-        return await ctx.send(f"❌ Invalid field. Use: `move`, `title`, `class`, or `color` (hex).")
+        return await ctx.send(f"❌ Invalid field. Use: `move`, `title`, or `color` (hex).")
 
-    # Basic Hex validation for color
     if field == "color" and not value.startswith("0x"):
-        return await ctx.send("❌ Colors must be in hex format (e.g., `0xff0000` for red).")
+        return await ctx.send("❌ Colors must be in hex format (e.g., `0xff0000`).")
 
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    # Ensure entry exists
     c.execute("INSERT OR IGNORE INTO profiles (user_id) VALUES (?)", (str(ctx.author.id),))
-    # Update the specific field
     c.execute(f"UPDATE profiles SET {valid_fields[field]} = ? WHERE user_id = ?", (value, str(ctx.author.id)))
     conn.commit()
     conn.close()
