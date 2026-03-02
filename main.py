@@ -388,6 +388,71 @@ async def ranks(ctx):
     embed.set_footer(text="Higher ranks earn more prestige in the Leaderboard!")
     
     await ctx.send(embed=embed)
+
+
+
+@bot.command(name="decklist")
+async def decklist(ctx, *, search: str = None):
+    """Shows the meta directory or searches for a specific deck."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+
+    # --- SEARCH LOGIC ---
+    if search:
+        # We use LIKE so "rai" matches "Rai"
+        c.execute("SELECT name, tier FROM archetypes WHERE name LIKE ?", (f"%{search}%",))
+        result = c.fetchone()
+        conn.close()
+
+        if result:
+            name, tier = result
+            embed = discord.Embed(title=f"🔍 Archetype Found: {name}", color=0x3498db)
+            embed.add_field(name="Current Tier", value=f"**{tier}**")
+            embed.set_footer(text="Use !meta to see win rates for this deck.")
+            return await ctx.send(embed=embed)
+        else:
+            return await ctx.send(f"❌ No deck found matching `{search}`. Check your spelling or use `!decklist` for the full list.")
+
+    # --- FULL LIST LOGIC ---
+    c.execute("""
+        SELECT name, tier FROM archetypes 
+        ORDER BY CASE tier 
+            WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 WHEN 'C' THEN 4 ELSE 5 END
+    """)
+    decks = c.fetchall()
+    conn.close()
+
+    if not decks:
+        return await ctx.send("📭 The decklist is currently empty.")
+
+    embed = discord.Embed(
+        title="⚔️ ARENA ARCHIVE: DECKLIST",
+        description="A list of all registered archetypes. Use `!decklist [name]` to search.",
+        color=0x2f3136
+    )
+
+    # Grouping for the Embed
+    tiers = {}
+    for name, tier in decks:
+        if tier not in tiers: tiers[tier] = []
+        tiers[tier].append(name)
+
+    tier_emojis = {"S": "⭐", "A": "🥇", "B": "🥈", "C": "🥉"}
+    for tier, names in tiers.items():
+        embed.add_field(name=f"{tier_emojis.get(tier, '🃏')} {tier}-Tier", value=" • ".join(names), inline=False)
+
+    # Adding the interactive dropdown for the full list
+    class DeckSelect(discord.ui.Select):
+        def __init__(self, options):
+            super().__init__(placeholder="Select a deck for quick info...", options=options)
+        async def callback(self, interaction: discord.Interaction):
+            await interaction.response.send_message(f"✅ Selected **{self.values[0]}**. Use `!meta` to see how it performs!", ephemeral=True)
+
+    view = discord.ui.View()
+    dropdown_options = [discord.SelectOption(label=d[0]) for d in decks[:25]]
+    view.add_item(DeckSelect(dropdown_options))
+
+    await ctx.send(embed=embed, view=view)
     
 
 
