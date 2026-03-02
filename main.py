@@ -75,7 +75,7 @@ def init_db():
     )""")
 
 # 4. Optional: Pre-populate with current GA Meta
-        meta_decks = [
+   meta_decks = [
         # S Tier
         ('Rai', 'S'),
         ('Silvie', 'S'),
