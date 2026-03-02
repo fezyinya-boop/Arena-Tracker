@@ -13,7 +13,7 @@ from threading import Thread
 import pandas as pd
 from tabulate import tabulate 
 from discord import ui
-
+import asyncio
 
 # --- Config & Secrets ---
 TOKEN = os.environ["DISCORD_TOKEN"]
@@ -187,30 +187,48 @@ class LeaderboardWebView(discord.ui.View):
             emoji="🌐"
         ))
 
-        
+
 
 class MatchReportingView(discord.ui.View):
     def __init__(self, p1, p2, match_id):
-        super().__init__(timeout=1800)
+        # UI & Expiration fix: Buttons live for 2 hours to cover long games
+        super().__init__(timeout=7200.0)
         self.p1, self.p2 = p1, p2
         self.match_id = match_id
         self.reports = {p1.id: None, p2.id: None}
+        
+        # Set specific labels from your original code
         self.report_p1.label = f"{p1.display_name} Won"
         self.report_p2.label = f"{p2.display_name} Won"
+        
+        self.forfeit_task = None  # The 30-minute fuse
 
-    async def finalize(self, interaction, winner_id):
+    async def start_forfeit_timer(self, interaction):
+        """Waits 30 mins after the first report, then awards win to the reporter."""
+        await asyncio.sleep(1800) 
+        p1_rep, p2_rep = self.reports[self.p1.id], self.reports[self.p2.id]
+
+        # If only one person reported, they are the winner by forfeit
+        if (p1_rep and not p2_rep) or (p2_rep and not p1_rep):
+            winner_id = p1_rep if p1_rep else p2_rep
+            # We call your existing finalize logic to handle the Elo/Roles
+            await self.finalize(interaction, winner_id, forfeit=True)
+
+    async def finalize(self, interaction, winner_id, forfeit=False):
+        """Your original Elo & Database logic, updated for Forfeits."""
         w_mem = self.p1 if winner_id == self.p1.id else self.p2
         l_mem = self.p2 if winner_id == self.p1.id else self.p1
         
-        # 1. Update Match Table for Meta Stats
+        # 1. Update Match Table
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
-        c.execute("UPDATE matches SET winner_id = ?, status = 'completed' WHERE id = ?", 
-                  (str(winner_id), self.match_id))
+        notes = "Auto-Forfeit: No response" if forfeit else "Standard Match"
+        c.execute("UPDATE matches SET winner_id = ?, status = 'completed', notes = ? WHERE id = ?", 
+                  (str(winner_id), self.match_id, notes))
         conn.commit()
         conn.close()
 
-        # 2. Points & History Logic
+        # 2. Points & History Logic (Directly from your original code)
         w_data = get_or_create_user(w_mem.id, w_mem.display_name)
         l_data = get_or_create_user(l_mem.id, l_mem.display_name)
         r1, r2 = w_data[2], l_data[2]
@@ -230,11 +248,20 @@ class MatchReportingView(discord.ui.View):
 
         # 3. Success Embed
         rank_info = get_rank_info(r1 + pts)
-        embed = discord.Embed(title="⚔️ MATCH VERIFIED", color=rank_info["color"])
+        title = "⚠️ FORFEIT VERIFIED" if forfeit else "⚔️ MATCH VERIFIED"
+        embed = discord.Embed(title=title, color=rank_info["color"])
         embed.description = f"**{w_mem.display_name}** defeated **{l_mem.display_name}**"
+        if forfeit:
+            embed.description += "\n*(Opponent failed to report within 30 minutes)*"
+        
         embed.add_field(name="RESULTS", value=f"📈 **{w_mem.display_name}**: `+{pts} RP`\n📉 **{l_mem.display_name}**: `-{pts} RP`", inline=False)
         embed.set_footer(text="Arena Tracker • Meta Data Recorded")
-        await interaction.response.edit_message(content=None, embed=embed, view=None)
+        
+        # If auto-forfeited, use interaction.message.edit because interaction might be expired
+        if forfeit:
+            await interaction.message.edit(content=None, embed=embed, view=None)
+        else:
+            await interaction.response.edit_message(content=None, embed=embed, view=None)
 
     @discord.ui.button(label="Player A Won", style=discord.ButtonStyle.success, emoji="⚔️", row=1)
     async def report_p1(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -248,20 +275,50 @@ class MatchReportingView(discord.ui.View):
         self.reports[interaction.user.id] = self.p2.id
         await self.check_reports(interaction)
 
+    @discord.ui.button(label="Technical Issue / Dispute", style=discord.ButtonStyle.secondary, emoji="🛠️", row=2)
+    async def pause_timer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Stops the 30m fuse and pings staff."""
+        if interaction.user.id not in [self.p1.id, self.p2.id]: return
+        
+        if self.forfeit_task and self.forfeit_task != "PAUSED":
+            self.forfeit_task.cancel()
+            self.forfeit_task = "PAUSED"
+            
+        embed = discord.Embed(
+            title="🛠️ MATCH FROZEN",
+            description=f"**{interaction.user.display_name}** flagged an issue.\nAuto-forfeit disabled. <@&{MOD_ROLE_ID}> review required.",
+            color=0x95a5a6
+        )
+        await interaction.response.edit_message(content=f"<@&{MOD_ROLE_ID}>", embed=embed, view=None)
+
     async def check_reports(self, interaction):
         p1_rep, p2_rep = self.reports[self.p1.id], self.reports[self.p2.id]
+        
         if p1_rep and p2_rep:
+            if self.forfeit_task and self.forfeit_task != "PAUSED":
+                self.forfeit_task.cancel()
+            
             if p1_rep != p2_rep:
                 embed = discord.Embed(
                     title="⚠️ MATCH DISPUTE",
-                    description=f"**{self.p1.display_name}** and **{self.p2.display_name}** reported different winners.\n\nA <@&{MOD_ROLE_ID}> must resolve this via `!settle`.",
+                    description=f"**{self.p1.display_name}** and **{self.p2.display_name}** reported differently.\nA <@&{MOD_ROLE_ID}> must resolve via `!settle`.",
                     color=0xe74c3c
                 )
                 await interaction.response.edit_message(content=f"<@&{MOD_ROLE_ID}>", embed=embed, view=None)
             else:
                 await self.finalize(interaction, p1_rep)
         else:
-            await interaction.response.edit_message(content=f"⏳ **{interaction.user.display_name}** reported. Waiting for opponent...")
+            # First Report Trigger
+            if not self.forfeit_task:
+                other_player = self.p2 if interaction.user.id == self.p1.id else self.p1
+                self.forfeit_task = asyncio.create_task(self.start_forfeit_timer(interaction))
+                await interaction.response.edit_message(
+                    content=f"⏳ **{interaction.user.display_name}** reported. <@{other_player.id}> has **30 mins** to confirm or face an auto-loss."
+                )
+            else:
+                # Already waiting
+                await interaction.response.edit_message(content=f"⏳ Still waiting for opponent to confirm...")
+                
                 
 
 
