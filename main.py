@@ -398,6 +398,46 @@ async def intro(ctx):
         "2️⃣ **Check the Meta:** Type `!decklist` to see Matchup Matrixes.\n"
         "3️⃣ **Challenge:** Use `!challenge or !duel @user and earn RP`."
     )
+
+    # 2. Arena Rules
+    rules = (
+        "⚖️ **Fair Play:** Respect your opponents. Salt belongs in the ocean, not the Arena.\n"
+        "📊 **Elo System:** Beating high ranks gains more RP. Losing to lower ranks drops more RP.\n"
+        "⚔️ **Meta Tracking:** Always select the correct archetype for accurate global stats."
+    )
+    embed.add_field(name="📜 ARENA GUIDELINES", value=rules, inline=False)
+
+    # 3. Matchmaking 101
+    matchmaking = (
+        f"• Head over to <#{MATCHMAKING_CHANNEL_ID}>\n"
+        "• Use `!challenge @user` to initiate a duel.\n"
+        "• Select your decks and report results via the buttons provided."
+    )
+    embed.add_field(name="⚔️ MATCHMAKING 101", value=matchmaking, inline=False)
+
+    # Footer with Live Stats
+    embed.set_footer(text=f"Arena Agent v3.0 • {total_matches} matches recorded • Data stays forever")
+
+    # Action Buttons
+    view = discord.ui.View()
+    # Button 1: External Website (The Link you provided)
+    view.add_item(discord.ui.Button(
+        label="View Global Rankings", 
+        url=LEADERBOARD_URL, 
+        style=discord.ButtonStyle.link,
+        emoji="🌐"
+    ))
+    # Button 2: Internal Jump
+    view.add_item(discord.ui.Button(
+        label="Jump to Matchmaking", 
+        url=f"https://discord.com/channels/{ctx.guild.id}/{MATCHMAKING_CHANNEL_ID}", 
+        style=discord.ButtonStyle.link,
+        emoji="🏹"
+    ))
+
+    await ctx.send(embed=embed, view=view)
+    
+    
     embed.add_field(name="⚔️ START YOUR JOURNEY", value=steps, inline=False)
 
     embed.set_footer(text="Archive Arena Agent • Version 3.0 • Automated Elo Enabled")
