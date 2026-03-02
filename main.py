@@ -1119,10 +1119,23 @@ async def unregister(ctx):
     """Completely wipes the user's cashtag from the database."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("UPDATE profiles SET tag = NULL WHERE user_id = ?", (str(ctx.author.id),))
-    conn.commit()
-    conn.close()
-    await ctx.send("🗑️ **Data Cleared:** Your Cashtag has been removed from our system.")
+    try:
+        # 1. Execute the wipe
+        c.execute("UPDATE profiles SET cashtag = NULL WHERE user_id = ?", (str(ctx.author.id),))
+        
+        # 2. Commit the change (The most important part!)
+        conn.commit()
+        
+        # 3. Double check if it actually worked
+        if c.rowcount > 0:
+            await ctx.send("🗑️ **Data Cleared:** Your $Cashtag has been removed from our records.")
+        else:
+            await ctx.send("ℹ️ **Notice:** You didn't have a $Cashtag registered, or your profile doesn't exist yet.")
+            
+    except Exception as e:
+        await ctx.send(f"⚠️ **Database Error:** `{e}`")
+    finally:
+        conn.close()
 
     
 
