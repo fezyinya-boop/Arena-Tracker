@@ -75,7 +75,7 @@ def init_db():
     )""")
 
 # 4. Optional: Pre-populate with current GA Meta
-    meta_decks = [
+meta_decks = [
         # S Tier
         ('Rai', 'S'),
         ('Silvie', 'S'),
@@ -94,11 +94,11 @@ def init_db():
         ('Reiya', 'C'),
         # Untiered / Rogue
         ('Dungeon', 'Untiered'),
-    ]
-    c.executemany("INSERT OR IGNORE INTO archetypes (name, tier) VALUES (?, ?)", meta_decks)
-    conn.commit()
-    conn.close()
-    print(f"🚀 Database initialized, Meta tracking active: {DB_NAME}")
+]
+c.executemany("INSERT OR IGNORE INTO archetypes (name, tier) VALUES (?, ?)", meta_decks)
+conn.commit()
+conn.close()
+print(f"🚀 Database initialized, Meta tracking active: {DB_NAME}")
 
     
 
