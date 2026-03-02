@@ -796,9 +796,9 @@ async def rank(ctx, member: discord.Member = None):
         # Calculate percentage (0-10 for the bar, 0-100 for the text)
         percent = min(max(int((current_progress / total_needed) * 10), 0), 10)
         bar = "▰" * percent + "▱" * (10 - percent)
-        progress_val = f"{bar} {int((current_progress/total_needed)*100)}% to {next_rank['name']}"
+        progress_val = f"{bar} {int((current_progress/total_needed)*100)}% to {next_rank['emoji']}"
     else:
-        progress_val = "▰▰▰▰▰▰▰▰▰▰ **MAX RANK**"
+        progress_val = "▰▰▰▰▰▰▰▰▰▰ **ASCENDED**"
 
     # --- Build the Embed ---
     embed = discord.Embed(title=f"{member.display_name}", color=r_info["color"])
