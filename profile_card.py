@@ -63,7 +63,6 @@ def make_profile_card(
     draw = ImageDraw.Draw(card)
 
     # --- BACKGROUND ---
-    # Horizontal gradient: dark left, slightly lighter right
     for x in range(W):
         shade = int(14 * (1 - x / W))
         draw.line([(x, 0), (x, H)], fill=(shade, shade, shade, 255))
@@ -73,27 +72,31 @@ def make_profile_card(
         a = int(20 * (1 - r / 280) ** 2)
         draw.ellipse([(50 - r, H//2 - r), (50 + r, H//2 + r)], fill=(*rc, a))
 
-    # Left accent bar + glow
+    # Left accent bar + soft glow
     draw.rectangle([(0, 0), (5, H)], fill=(*rc, 255))
     for gi in range(20, 0, -2):
         ga = int(40 * (gi / 20) ** 2)
         draw.rectangle([(5, 0), (5 + gi, H)], fill=(*rc, ga))
 
-    # Thin top + bottom edge lines
+    # Thin top/bottom edge lines
     draw.line([(0, 0), (W, 0)], fill=(*rc, 60), width=1)
     draw.line([(0, H-1), (W, H-1)], fill=(*rc, 60), width=1)
 
-    # --- FONTS — identical filenames to original ---
-    f_name  = load_custom_font("Orbitron-VariableFont_wght.ttf", 44)
-    f_pts   = load_custom_font("Michroma-Regular.ttf", 68)
-    f_label = load_custom_font("Michroma-Regular.ttf", 11)   # smaller labels
-    f_title = load_custom_font("PirataOne-Regular.ttf", 30)  # slightly smaller
-    f_value = load_custom_font("FunnelSans-Regular.ttf", 22)
-    f_prog  = load_custom_font("FunnelSans-Light.ttf", 13)
+    # --- FONTS ---
+    f_name   = load_custom_font("Orbitron-VariableFont_wght.ttf", 44)
+    f_pts    = load_custom_font("Michroma-Regular.ttf", 68)
+    # Headers now use Orbitron (same as name) at a readable bold size
+    f_label  = load_custom_font("Orbitron-VariableFont_wght.ttf", 13)
+    # Rank and title now use Orbitron instead of PirataOne
+    f_title  = load_custom_font("Orbitron-VariableFont_wght.ttf", 22)
+    f_value  = load_custom_font("FunnelSans-Regular.ttf", 22)
+    f_prog   = load_custom_font("FunnelSans-Light.ttf", 13)
+    # Bigger signature move value
+    f_move   = load_custom_font("FunnelSans-Regular.ttf", 26)
 
-    LABEL = (85, 85, 95)    # dimmer label color
-    WHITE = (235, 232, 228) # warm white for values
-    DIM   = (35, 35, 40)    # divider color
+    LABEL = (85, 85, 95)
+    WHITE = (235, 232, 228)
+    DIM   = (35, 35, 40)
 
     # --- AVATAR ---
     av_size = 220
@@ -122,17 +125,15 @@ def make_profile_card(
     )
     card.paste(av_circ, (av_x, av_y), av_circ)
 
-    # Rank badge on avatar corner
+    # Rank badge overlapping avatar corner — no background circle, just the badge
     badge_size = 72
     cur_badge = get_rank_badge(current_rank_raw, size=badge_size)
     if cur_badge:
-        bx = av_x + av_size - 60
-        by = av_y + av_size - 60
-        draw.ellipse([(bx-6, by-6), (bx+badge_size+6, by+badge_size+6)],
-                     fill=(0, 0, 0, 255), outline=(*rc, 100), width=2)
+        bx = av_x + av_size - 50
+        by = av_y + av_size - 50
         card.paste(cur_badge, (bx, by), cur_badge)
 
-    # --- LAYOUT COLUMNS ---
+    # --- COLUMNS ---
     col_name  = 295
     col_stats = 660
 
@@ -146,45 +147,42 @@ def make_profile_card(
         name_w = len(display_name) * 26
     draw.line([(col_name, 90), (col_name + int(name_w), 90)], fill=(*rc, 140), width=2)
 
-    # --- RANK · TITLE ---
+    # --- RANK · TITLE (both now Orbitron) ---
     clean_cur = clean_rank_name(current_rank_raw)
-    # Rank in rank color
     draw.text((col_name, 100), clean_cur, font=f_title, fill=(*rc, 255))
     try:
         rank_w = draw.textlength(clean_cur, font=f_title)
     except:
-        rank_w = len(clean_cur) * 18
-    draw.text((col_name + rank_w + 10, 106), "·", font=f_value, fill=LABEL)
+        rank_w = len(clean_cur) * 14
+    draw.text((col_name + rank_w + 10, 104), "·", font=f_value, fill=LABEL)
     draw.text((col_name + rank_w + 26, 100), p_title, font=f_title, fill=WHITE)
 
-    # --- SECTION DIVIDER ---
-    draw.line([(col_name, 148), (W - 30, 148)], fill=DIM, width=1)
+    # --- DIVIDER ---
+    draw.line([(col_name, 140), (W - 30, 140)], fill=DIM, width=1)
 
-    # --- RATING ---
-    draw.text((col_name, 158), "RATING", font=f_label, fill=LABEL)
-    draw.text((col_name, 175), str(pts), font=f_pts, fill=(*rc, 255))
-    rp_x = col_name + len(str(pts)) * 38 + 4
-    draw.text((rp_x, 228), "RP", font=f_label, fill=LABEL)
+    # --- RATING (header bigger, no RP label) ---
+    draw.text((col_name, 150), "RATING", font=f_label, fill=LABEL)
+    draw.text((col_name, 168), str(pts), font=f_pts, fill=(*rc, 255))
 
     # --- RECORD ---
     total = wins + losses
     wr = round((wins / total) * 100) if total > 0 else 0
-    draw.text((col_stats, 158), "RECORD", font=f_label, fill=LABEL)
-    draw.text((col_stats, 176), f"{wins}W – {losses}L", font=f_value, fill=WHITE)
-    draw.text((col_stats, 206), f"{wr}% win rate", font=f_prog, fill=LABEL)
+    draw.text((col_stats, 150), "RECORD", font=f_label, fill=LABEL)
+    draw.text((col_stats, 170), f"{wins}W – {losses}L", font=f_value, fill=WHITE)
+    draw.text((col_stats, 200), f"{wr}% win rate", font=f_prog, fill=LABEL)
 
     # --- STREAK ---
     streak_col = (*rc, 255) if streak >= 3 else WHITE
-    draw.text((col_stats, 255), "STREAK", font=f_label, fill=LABEL)
+    draw.text((col_stats, 248), "STREAK", font=f_label, fill=LABEL)
     streak_label = f"{streak} Wins  🔥" if streak >= 3 else f"{streak} Wins"
-    draw.text((col_stats, 273), streak_label, font=f_value, fill=streak_col)
+    draw.text((col_stats, 268), streak_label, font=f_value, fill=streak_col)
 
-    # --- SECTION DIVIDER ---
-    draw.line([(col_name, 335), (W - 30, 335)], fill=DIM, width=1)
+    # --- DIVIDER ---
+    draw.line([(col_name, 325), (W - 30, 325)], fill=DIM, width=1)
 
-    # --- SIGNATURE MOVE ---
-    draw.text((col_name, 344), "SIGNATURE MOVE", font=f_label, fill=LABEL)
-    draw.text((col_name, 362), p_move.upper(), font=f_value, fill=WHITE)
+    # --- SIGNATURE MOVE (bigger value text) ---
+    draw.text((col_name, 334), "SIGNATURE MOVE", font=f_label, fill=LABEL)
+    draw.text((col_name, 355), p_move.upper(), font=f_move, fill=WHITE)
 
     # --- PROGRESS BAR ---
     bar_x = col_name
@@ -193,7 +191,6 @@ def make_profile_card(
     bar_w = W - col_name - 30 - badge_slot - 10
     bar_h = 8
 
-    # Progress label
     if next_rank_raw:
         clean_next = clean_rank_name(next_rank_raw)
         draw.text((bar_x, bar_y - 18), f"{int(pct*100)}% to {clean_next}",
@@ -228,4 +225,3 @@ def make_profile_card(
     card.save(buf, 'PNG')
     buf.seek(0)
     return buf
-    
