@@ -338,6 +338,9 @@ class ChallengeView(discord.ui.View):
         view.add_item(DeckSelect(match_id, self.p2.id, self.p2.display_name))
         
         await interaction.response.edit_message(content=None, embed=embed, view=view)
+
+bot.remove_command('help')
+
         
 
 # --- Commands ---
