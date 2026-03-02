@@ -38,6 +38,27 @@ def init_db():
     # 2. Connect and create ALL tables in one pass
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
+
+    meta_decks = [
+        # S Tier
+        ('Rai', 'S'),
+        ('Silvie', 'S'),
+        # A Tier
+        ('Lorraine', 'A'),
+        ('Mordred', 'A'),
+        ('Alyndra', 'A'),
+        # B Tier
+        ('Tristan', 'B'),
+        ('Diana', 'B'),
+        ('Zara', 'B'),
+        ('Kalmia', 'B'),
+        # C Tier
+        ('Lore', 'C'),
+        ('Aimee', 'C'),
+        ('Reiya', 'C'),
+        # Untiered / Rogue
+        ('Dungeon', 'Untiered'),
+    ]
     
     # User Statistics & Match History
     c.execute('''CREATE TABLE IF NOT EXISTS users 
@@ -73,32 +94,11 @@ def init_db():
         status TEXT DEFAULT 'active',
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )""")
-
-# 4. Optional: Pre-populate with current GA Meta
-meta_decks = [
-        # S Tier
-        ('Rai', 'S'),
-        ('Silvie', 'S'),
-        # A Tier
-        ('Lorraine', 'A'),
-        ('Mordred', 'A'),
-        ('Alyndra', 'A'),
-        # B Tier
-        ('Tristan', 'B'),
-        ('Diana', 'B'),
-        ('Zara', 'B'),
-        ('Kalmia', 'B'),
-        # C Tier
-        ('Lore', 'C'),
-        ('Aimee', 'C'),
-        ('Reiya', 'C'),
-        # Untiered / Rogue
-        ('Dungeon', 'Untiered'),
-]
-c.executemany("INSERT OR IGNORE INTO archetypes (name, tier) VALUES (?, ?)", meta_decks)
-conn.commit()
-conn.close()
-print(f"🚀 Database initialized, Meta tracking active: {DB_NAME}")
+              
+    c.executemany("INSERT OR IGNORE INTO archetypes (name, tier) VALUES (?, ?)", meta_decks)
+    conn.commit()
+    conn.close()
+    print(f"🚀 Database initialized, Meta tracking active: {DB_NAME}")
 
     
 
