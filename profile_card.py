@@ -90,10 +90,10 @@ def make_profile_card(
     f_pts   = load_custom_font("Michroma-Regular.ttf", 68)
     # Headers: DejaVuSans-Bold for actual bold weight
     f_label = load_custom_font("DejaVuSans-Bold.ttf", 18)
-    f_title = load_custom_font("Orbitron-VariableFont_wght.ttf", 22)
-    f_value = load_custom_font("FunnelSans-Regular.ttf", 22)
-    f_prog  = load_custom_font("FunnelSans-Light.ttf", 13)
-    f_move  = load_custom_font("FunnelSans-Regular.ttf", 26)
+    f_title = load_custom_font("DejaVuSans-Bold.ttf", 22)
+    f_value = load_custom_font("DejaVuSans-Bold.ttf", 22)
+    f_prog  = load_custom_font("DejaVuSans-Bold.ttf", 13)
+    f_move  = load_custom_font("DejaVuSans-Bold.ttf", 26)
 
     LABEL = (85, 85, 95)
     WHITE = (235, 232, 228)
