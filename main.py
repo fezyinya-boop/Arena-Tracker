@@ -366,6 +366,7 @@ class ChallengeView(discord.ui.View):
 # --- Commands ---
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
+    
 @bot.command(name="intro")
 @commands.has_permissions(administrator=True)
 async def intro(ctx):
@@ -448,8 +449,6 @@ async def intro(ctx):
     await ctx.send(embed=embed)
     # Delete the trigger message to keep the channel clean
     await ctx.message.delete()
-    
-
 
 
 @bot.command()
