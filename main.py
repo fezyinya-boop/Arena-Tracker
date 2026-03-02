@@ -381,6 +381,39 @@ class MatchView(discord.ui.View):
         self.add_item(DeckSelect(match_id, p2.id, p2.display_name))
 
 
+class OpenMatchView(discord.ui.View):
+    def __init__(self, challenger):
+        super().__init__(timeout=600)
+        self.challenger = challenger
+
+    @discord.ui.button(label="Join Match", style=discord.ButtonStyle.success, emoji="🎮")
+    async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.challenger.id:
+            return await interaction.response.send_message("You can't join your own match!", ephemeral=True)
+
+        opponent = interaction.user
+        
+        # Create the match in your DB (using your DB_NAME variable)
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("INSERT INTO matches (p1_id, p2_id, status) VALUES (?, ?, 'active')", 
+                  (str(self.challenger.id), str(opponent.id)))
+        match_id = c.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Switch to the reporting UI (Standardizing with your existing code)
+        embed = discord.Embed(
+            title="⚔️ MATCH STARTING",
+            description=f"Match found! **{self.challenger.display_name}** vs **{opponent.display_name}**.",
+            color=0x3498db
+        )
+        
+        # This reuses the MatchReportingView already in your main.py
+        view = MatchReportingView(self.challenger, opponent, match_id)
+        await interaction.response.edit_message(content=None, embed=embed, view=view)
+        
+
 
 class ChallengeView(discord.ui.View):
     def __init__(self, p1, p2):
@@ -916,6 +949,20 @@ async def rules(ctx):
     
     embed.set_footer(text="Play Fair, Duel Hard")
     await ctx.send(embed=embed)
+
+
+@bot.command(name="match")
+async def match(ctx):
+    """Starts an open lobby that anyone can join."""
+    view = OpenMatchView(ctx.author)
+    embed = discord.Embed(
+        title="🏟️ OPEN LOBBY",
+        description=f"**{ctx.author.display_name}** is looking for an opponent!\nClick the button below to play.",
+        color=0x2ecc71
+    )
+    embed.set_footer(text="This lobby expires in 10 minutes.")
+    await ctx.send(embed=embed, view=view)
+    
 
 
     
