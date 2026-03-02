@@ -366,6 +366,49 @@ class ChallengeView(discord.ui.View):
 # --- Commands ---
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
+@bot.command(name="intro")
+@commands.has_permissions(administrator=True)
+async def intro(ctx):
+    """Generates the official Arena Archive landing page."""
+    embed = discord.Embed(
+        title="🏛️ WELCOME TO THE ARCHIVE ARENA",
+        description=(
+            "The definitive home for competitive play. Draft your deck, "
+            "climb the tiers, and archive your legacy.\n\n"
+            "This server is powered by a custom **Arena Tracker Agent** "
+            "that monitors every match, calculates Elo (RP), and tracks the global meta."
+        ),
+        color=0x2b2d31 # Sleek Dark Grey
+    )
+
+    # Progression Section
+    progression = (
+        f"<:Diamond:1477427100666433572> **DIAMOND** — `1800+ RP`\n"
+        f"<:Platinum:1477426802317201411> **PLATINUM** — `1600 RP`\n"
+        f"<:Gold:1477426026945577000> **GOLD** — `1400 RP`\n"
+        f"<:Silver:1477427675067842588> **SILVER** — `1200 RP`\n"
+        f"<:rookie:1476994147935322265> **BRONZE** — `The Starting Line`"
+    )
+    embed.add_field(name="🏆 THE PATH TO CHAMPION", value=progression, inline=False)
+
+    # Instructions Section
+    steps = (
+        "1️⃣ **View Your Stats:** Type `!rank` to see your current standing.\n"
+        "2️⃣ **Check the Meta:** Type `!decklist` to see which archetypes are S-Tier.\n"
+        "3️⃣ **Challenge:** Use `!challenge or !duel @user and earn RP`."
+    )
+    embed.add_field(name="⚔️ START YOUR JOURNEY", value=steps, inline=False)
+
+    embed.set_footer(text="Archive Arena Agent • Version 3.0 • Automated Elo Enabled")
+    
+    # Optional: Add a high-res image if you have a server banner
+    # embed.set_image(url="YOUR_BANNER_URL_HERE")
+
+    await ctx.send(embed=embed)
+    # Delete the trigger message to keep the channel clean
+    await ctx.message.delete()
+    
+
 
 
 @bot.command()
