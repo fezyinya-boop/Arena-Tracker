@@ -558,65 +558,19 @@ async def cardprofile(ctx, member: discord.Member = None):
     await ctx.send(file=discord.File(buf, filename='profile.png'))
 
 
-@bot.command(name="commands")
+@bot.command(name="list")
 async def list_commands(ctx):
-    """Displays a list of all available arena commands."""
+    """Automatically lists every command registered to the bot."""
+    # This grabs every command currently loaded in the bot's brain
+    commands_list = [f"`!{c.name}` - {c.help or 'No description'}" for c in bot.commands if not c.hidden]
+    
     embed = discord.Embed(
-        title="⚔️ ARCHIVE ARENA COMMAND LIST",
-        description="Here are all the available commands to help you navigate the Arena.",
-        color=0x3498db
+        title="📜 Available Commands",
+        description="\n".join(commands_list),
+        color=discord.Color.blue()
     )
-
-    # Player Commands
-    embed.add_field(
-        name="👤 Player Commands",
-        value=(
-            "`!duel @user` - Challenge someone to a match\n"
-            "`!rank` - View your current RP and progress\n"
-            "`!profile` - View your RPG stats and title\n"
-            "`!cardprofile` - Generate your visual rank card\n"
-            "`!history` - View your last 10 matches\n"
-            "`!setprofile [field] [value]` - Update move/title/color"
-        ),
-        inline=False
-    )
-
-    # Info Commands
-    embed.add_field(
-        name="📊 Information",
-        value=(
-            "`!ranks` - View the RP requirements for each tier\n"
-            "`!rules` - View the official Arena guidelines\n"
-            "`!leaderboard` - Manually trigger a leaderboard refresh"
-        ),
-        inline=False
-    )
-
-    # Tournament Commands (Note: Some are Admin only)
-    embed.add_field(
-        name="🏟️ Tournament",
-        value=(
-            "`!tourney_list` - See current entrants\n"
-            "`!tourney_open` - Open registration (Admin)\n"
-            "`!tourney_start` - Generate the bracket (Admin)\n"
-            "`!tourney_end` - Wipe current session (Admin)"
-        ),
-        inline=False
-    )
-
-    # Admin/Staff Commands
-    embed.add_field(
-        name="🛠️ Staff Tools",
-        value=(
-            "`!settle @winner @loser` - Force resolve a dispute\n"
-            "`!backup` - DM the database file to admins\n"
-            "`!sync_rpg` - Verify database columns"
-        ),
-        inline=False
-    )
-
-    embed.set_footer(text="Archive Arena | Season 1")
     await ctx.send(embed=embed)
+
     
 
 @bot.command()
