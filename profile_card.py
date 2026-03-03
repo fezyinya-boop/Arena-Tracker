@@ -1,223 +1,375 @@
-from PIL import Image, ImageDraw, ImageFont
+from __future__ import annotations
+
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance, ImageChops
 import aiohttp
 import io
 import os
 import re
+from functools import lru_cache
+from typing import Optional, Tuple
 
-# --- FONTS ---
-def load_custom_font(font_filename, size):
-    font_path = os.path.join(os.path.dirname(__file__), "fonts", font_filename)
-    if os.path.exists(font_path):
-        return ImageFont.truetype(font_path, size)
-    for path in [
-        '/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-bold.otf',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-    ]:
-        if os.path.exists(path):
-            return ImageFont.truetype(path, size)
+RGBA = Tuple[int, int, int, int]
+RGB = Tuple[int, int, int]
+
+# ----------------------------
+# Paths
+# ----------------------------
+FONTS_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
+
+# ----------------------------
+# Anime arena background overlay
+# ----------------------------
+def apply_anime_arena_background(
+    base: Image.Image,
+    art: Image.Image,
+    *,
+    focus_right: bool = True,
+    art_strength: float = 0.55,   # 0..1 visibility of art
+    blur_px: int = 10,            # soften detail so it’s not clutter
+    saturation: float = 1.10,     # keep anime pop
+    brightness: float = 0.62,     # darken so UI dominates
+    contrast: float = 1.05,
+) -> Image.Image:
+    """
+    Anime-style background plate:
+    - cover-fit art (optional right-bias crop)
+    - blur/desaturate/brighten controls
+    - left readability gradient
+    - subtle vignette + soft bloom
+    """
+    W, H = base.size
+    art = art.convert("RGBA")
+
+    # --- Cover-fit with optional right bias
+    aw, ah = art.size
+    target_ratio = W / H
+    art_ratio = aw / ah
+
+    if art_ratio > target_ratio:
+        # too wide -> crop width
+        new_w = int(ah * target_ratio)
+        left = aw - new_w if focus_right else (aw - new_w) // 2
+        art = art.crop((left, 0, left + new_w, ah))
+    else:
+        # too tall -> crop height
+        new_h = int(aw / target_ratio)
+        top = (ah - new_h) // 2
+        art = art.crop((0, top, aw, top + new_h))
+
+    art = art.resize((W, H), Image.Resampling.LANCZOS)
+
+    # --- Make it background-friendly
+    if blur_px > 0:
+        art = art.filter(ImageFilter.GaussianBlur(radius=blur_px))
+
+    art = ImageEnhance.Color(art).enhance(saturation)
+    art = ImageEnhance.Contrast(art).enhance(contrast)
+    art = ImageEnhance.Brightness(art).enhance(brightness)
+
+    # --- Apply art with controlled opacity
+    a = art.split()[-1].point(lambda v: int(v * art_strength))
+    art.putalpha(a)
+    out = Image.alpha_composite(base, art)
+
+    # --- Left readability gradient (protects text/UI)
+    grad = Image.new("L", (W, H), 0)
+    gd = ImageDraw.Draw(grad)
+    gd.rectangle((0, 0, int(W * 0.55), H), fill=200)
+    grad = grad.filter(ImageFilter.GaussianBlur(radius=int(W * 0.08)))
+
+    shade = Image.new("RGBA", (W, H), (0, 0, 0, 255))
+    shade.putalpha(grad)
+    out = Image.alpha_composite(out, shade)
+
+    # --- Subtle vignette
+    vig = Image.new("L", (W, H), 0)
+    vd = ImageDraw.Draw(vig)
+    pad = int(min(W, H) * 0.10)
+    vd.ellipse((pad, pad, W - pad, H - pad), fill=180)
+    vig = vig.filter(ImageFilter.GaussianBlur(radius=int(min(W, H) * 0.12)))
+
+    edge_dark = Image.new("RGBA", (W, H), (0, 0, 0, 210))
+    edge_dark.putalpha(ImageChops.invert(vig))
+    out = Image.alpha_composite(out, edge_dark)
+
+    # --- Soft bloom (keeps “magic glow” vibe)
+    bright_pass = ImageEnhance.Brightness(out).enhance(1.20).filter(ImageFilter.GaussianBlur(radius=6))
+    out = ImageChops.screen(out, bright_pass)
+
+    return out
+
+# ----------------------------
+# Font loading (cached)
+# ----------------------------
+@lru_cache(maxsize=128)
+def load_font(preferred_filename: str, size: int) -> ImageFont.FreeTypeFont:
+    """Load a font from ./fonts if available, else try common system fallbacks."""
+    path = os.path.join(FONTS_DIR, preferred_filename)
+    if os.path.exists(path):
+        return ImageFont.truetype(path, size)
+
+    for p in (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-bold.otf",
+    ):
+        if os.path.exists(p):
+            return ImageFont.truetype(p, size)
+
     return ImageFont.load_default()
 
-# --- FETCH AVATAR ---
-async def fetch_avatar(url: str):
+def text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
+    try:
+        return int(draw.textlength(text, font=font))
+    except Exception:
+        return int(len(text) * (getattr(font, "size", 16) * 0.6))
+
+def fit_font(draw: ImageDraw.ImageDraw, text: str, preferred_filename: str, max_w: int, start_size: int, min_size: int) -> ImageFont.ImageFont:
+    """Return a font that shrinks until text fits max_w."""
+    size = start_size
+    while size >= min_size:
+        f = load_font(preferred_filename, size)
+        if text_width(draw, text, f) <= max_w:
+            return f
+        size -= 1
+    return load_font(preferred_filename, min_size)
+
+# ----------------------------
+# Image helpers
+# ----------------------------
+def center_crop_square(img: Image.Image) -> Image.Image:
+    w, h = img.size
+    side = min(w, h)
+    left = (w - side) // 2
+    top = (h - side) // 2
+    return img.crop((left, top, left + side, top + side))
+
+def soft_circle_mask(size: int, feather: int = 4) -> Image.Image:
+    """Creates a slightly feathered circle mask."""
+    m = Image.new("L", (size, size), 0)
+    d = ImageDraw.Draw(m)
+    d.ellipse((feather, feather, size - feather - 1, size - feather - 1), fill=255)
+    m2 = m.resize((size * 2, size * 2), Image.Resampling.BICUBIC).resize((size, size), Image.Resampling.LANCZOS)
+    return m2
+
+async def fetch_avatar(url: str) -> Optional[Image.Image]:
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(str(url), timeout=aiohttp.ClientTimeout(total=5)) as resp:
+            async with session.get(str(url), timeout=aiohttp.ClientTimeout(total=6)) as resp:
                 if resp.status == 200:
                     data = await resp.read()
-                    return Image.open(io.BytesIO(data)).convert('RGBA')
+                    return Image.open(io.BytesIO(data)).convert("RGBA")
     except Exception as e:
         print(f"Avatar fetch error: {e}")
     return None
 
-# --- RANK UTILS ---
+# ----------------------------
+# Rank badge utils
+# ----------------------------
 def clean_rank_name(name: str) -> str:
-    return re.sub(r'<:[^:]+:\d+>\s*', '', name).strip()
+    return re.sub(r"<:[^:]+:\d+>\s*", "", name).strip()
 
-BADGES_DIR = os.path.join(os.path.dirname(__file__), 'badges')
+BADGES_DIR = os.path.join(os.path.dirname(__file__), "badges")
 RANK_BADGES = {
-    "DIAMOND":  os.path.join(BADGES_DIR, 'rank_diamond.png'),
-    "PLATINUM": os.path.join(BADGES_DIR, 'rank_platinum.png'),
-    "GOLD":     os.path.join(BADGES_DIR, 'rank_gold.png'),
-    "SILVER":   os.path.join(BADGES_DIR, 'rank_silver.png'),
-    "BRONZE":   os.path.join(BADGES_DIR, 'rank_bronze.png'),
+    "DIAMOND":  os.path.join(BADGES_DIR, "rank_diamond.png"),
+    "PLATINUM": os.path.join(BADGES_DIR, "rank_platinum.png"),
+    "GOLD":     os.path.join(BADGES_DIR, "rank_gold.png"),
+    "SILVER":   os.path.join(BADGES_DIR, "rank_silver.png"),
+    "BRONZE":   os.path.join(BADGES_DIR, "rank_bronze.png"),
 }
 
-def get_rank_badge(rank_name_raw: str, size: int = 60):
+def get_rank_badge(rank_name_raw: str, size: int = 60) -> Optional[Image.Image]:
     clean = clean_rank_name(rank_name_raw).upper()
     path = RANK_BADGES.get(clean)
     if not path or not os.path.exists(path):
         return None
     try:
-        return Image.open(path).convert('RGBA').resize((size, size), Image.LANCZOS)
-    except:
+        return Image.open(path).convert("RGBA").resize((size, size), Image.Resampling.LANCZOS)
+    except Exception:
         return None
 
-# --- CORE CARD GENERATOR ---
+# ----------------------------
+# Main card generator (crisp)
+# ----------------------------
 def make_profile_card(
-    display_name, p_title, p_move, pts, wins, losses, streak, pct,
-    current_rank_raw, next_rank_raw, rank_color, avatar_img=None
-):
-    W, H = 900, 460
+    display_name: str,
+    p_title: str,
+    p_move: str,
+    pts: int,
+    wins: int,
+    losses: int,
+    streak: int,
+    pct: float,
+    current_rank_raw: str,
+    next_rank_raw: Optional[str],
+    rank_color: RGB,
+    avatar_img: Optional[Image.Image] = None,
+) -> io.BytesIO:
+    SCALE = 2
+    W, H = 900 * SCALE, 460 * SCALE
     rc = rank_color
-    card = Image.new('RGBA', (W, H), (0, 0, 0, 255))
+
+    def S(x: int) -> int:
+        return x * SCALE
+
+    # Base
+    card = Image.new("RGBA", (W, H), (0, 0, 0, 255))
+
+    # ✅ Apply anime arena background FIRST (so your UI draws on top)
+    bg_path = os.path.join(ASSETS_DIR, "arena_bg.png")
+    if os.path.exists(bg_path):
+        try:
+            bg = Image.open(bg_path).convert("RGBA")
+            card = apply_anime_arena_background(
+                card,
+                bg,
+                focus_right=True,
+                art_strength=0.55,
+                blur_px=10,
+                saturation=1.10,
+                brightness=0.62,
+                contrast=1.05,
+            )
+        except Exception as e:
+            print(f"Background overlay error: {e}")
+
     draw = ImageDraw.Draw(card)
 
-    # --- BACKGROUND: subtle horizontal gradient ---
+    # Subtle left->right gradient (keep it subtle)
     for x in range(W):
-        shade = int(14 * (1 - x / W))
+        shade = int(18 - 10 * (x / W))
         draw.line([(x, 0), (x, H)], fill=(shade, shade, shade, 255))
 
-    # Radial glow behind avatar
-    for r in range(280, 0, -8):
-        a = int(20 * (1 - r / 280) ** 2)
-        draw.ellipse([(50 - r, H//2 - r), (50 + r, H//2 + r)], fill=(*rc, a))
+    # Colors
+    WHITE: RGBA = (238, 236, 232, 255)
+    MUTED: RGBA = (155, 155, 165, 255)
+    DIM: RGBA   = (40, 40, 48, 255)
 
-    # --- DIAGONAL SHEEN ---
-    sheen = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    sheen_draw = ImageDraw.Draw(sheen)
-    for i in range(80):
-        alpha = int(18 * (1 - abs(i - 40) / 40))
-        sheen_draw.line([(i * 6 - H, 0), (i * 6, H)], fill=(255, 255, 255, alpha), width=3)
-    card = Image.alpha_composite(card, sheen)
+    # Avatar placement
+    av_size = S(220)
+    av_x = S(40)
+    av_y = (H - av_size) // 2 - S(20)
+
+    if avatar_img is None:
+        avatar_img = Image.new("RGBA", (av_size, av_size), (25, 25, 28, 255))
+    else:
+        avatar_img = center_crop_square(avatar_img.convert("RGBA"))
+
+    av = avatar_img.resize((av_size, av_size), Image.Resampling.LANCZOS)
+
+    # Glow behind avatar (tight & clean)
+    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gx = av_x + av_size // 2
+    gy = av_y + av_size // 2
+    for r in range(S(170), 0, -S(10)):
+        a = int(40 * (1 - r / S(170)) ** 2)
+        gd.ellipse((gx - r, gy - r, gx + r, gy + r), fill=(rc[0], rc[1], rc[2], a))
+    card = Image.alpha_composite(card, glow)
     draw = ImageDraw.Draw(card)
 
-    # Thin top/bottom edge lines only (no left bar)
-    draw.line([(0, 0), (W, 0)], fill=(*rc, 60), width=1)
-    draw.line([(0, H-1), (W, H-1)], fill=(*rc, 60), width=1)
+    # Avatar circle
+    mask = soft_circle_mask(av_size, feather=S(2))
+    av_circ = Image.new("RGBA", (av_size, av_size), (0, 0, 0, 0))
+    av_circ.paste(av, (0, 0), mask=mask)
 
-    # --- FONTS ---
-    f_name  = load_custom_font("Orbitron-VariableFont_wght.ttf", 44)
-    f_pts   = load_custom_font("Michroma-Regular.ttf", 68)
-    # Headers: DejaVuSans-Bold for actual bold weight
-    f_label = load_custom_font("DejaVuSans-Bold.ttf", 18)
-    f_title = load_custom_font("DejaVuSans-Bold.ttf", 22)
-    f_value = load_custom_font("DejaVuSans-Bold.ttf", 22)
-    f_prog  = load_custom_font("DejaVuSans-Bold.ttf", 13)
-    f_move  = load_custom_font("DejaVuSans-Bold.ttf", 26)
-
-    LABEL = (85, 85, 95)
-    WHITE = (235, 232, 228)
-    DIM   = (35, 35, 40)
-
-    # --- AVATAR ---
-    av_size = 220
-    av_x = 40
-    av_y = (H - av_size) // 2 - 20
-
-    if not avatar_img:
-        avatar_img = Image.new('RGBA', (av_size, av_size), (25, 25, 25, 255))
-
-    av = avatar_img.resize((av_size, av_size))
-    mask = Image.new('L', (av_size, av_size), 0)
-    ImageDraw.Draw(mask).ellipse([(0, 0), (av_size, av_size)], fill=255)
-    av_circ = Image.new('RGBA', (av_size, av_size), (0, 0, 0, 0))
-    av_circ.paste(av, mask=mask)
-
-    # Layered glow ring
-    for gi in range(14, 0, -2):
-        ga = int(50 * (1 - gi / 14) ** 1.5)
-        draw.ellipse(
-            [(av_x - gi, av_y - gi), (av_x + av_size + gi, av_y + av_size + gi)],
-            outline=(*rc, ga), width=2
-        )
-    draw.ellipse(
-        [(av_x - 5, av_y - 5), (av_x + av_size + 5, av_y + av_size + 5)],
-        outline=(*rc, 200), width=4
-    )
+    # Clean ring
+    ring_rect = (av_x - S(6), av_y - S(6), av_x + av_size + S(6), av_y + av_size + S(6))
+    draw.ellipse(ring_rect, outline=(rc[0], rc[1], rc[2], 210), width=S(4))
     card.paste(av_circ, (av_x, av_y), av_circ)
 
-    # Rank badge overlapping avatar corner — no background
-    badge_size = 72
+    # Badge overlap
+    badge_size = S(72)
     cur_badge = get_rank_badge(current_rank_raw, size=badge_size)
     if cur_badge:
-        bx = av_x + av_size - 50
-        by = av_y + av_size - 50
+        bx = av_x + av_size - S(54)
+        by = av_y + av_size - S(54)
         card.paste(cur_badge, (bx, by), cur_badge)
 
-    # --- COLUMNS ---
-    col_name  = 295
-    col_stats = 660
+    # Column anchors
+    col_name = S(295)
+    col_stats = S(660)
+    right_pad = S(30)
 
-    # --- NAME ---
-    draw.text((col_name, 38), display_name.upper(), font=f_name, fill=WHITE)
-    try:
-        name_w = draw.textlength(display_name.upper(), font=f_name)
-    except:
-        name_w = len(display_name) * 26
-    draw.line([(col_name, 90), (col_name + int(name_w), 90)], fill=(*rc, 140), width=2)
+    # Fonts (fit-to-width)
+    name_text = (display_name or "PLAYER").upper()
+    f_name = fit_font(draw, name_text, "Orbitron-VariableFont_wght.ttf", max_w=W - col_name - right_pad, start_size=S(44), min_size=S(26))
+    f_pts  = load_font("Michroma-Regular.ttf", S(68))
+    f_label = load_font("DejaVuSans-Bold.ttf", S(18))
+    f_title = load_font("DejaVuSans-Bold.ttf", S(22))
+    f_value = load_font("DejaVuSans-Bold.ttf", S(22))
+    f_prog  = load_font("DejaVuSans-Bold.ttf", S(13))
 
-    # --- RANK · TITLE ---
+    move_text = (p_move or "").upper()
+    f_move = fit_font(draw, move_text, "DejaVuSans-Bold.ttf", max_w=W - col_name - right_pad, start_size=S(26), min_size=S(16))
+
+    # Name
+    draw.text((col_name, S(38)), name_text, font=f_name, fill=WHITE)
+    name_w = text_width(draw, name_text, f_name)
+    draw.line([(col_name, S(90)), (col_name + name_w, S(90))], fill=(rc[0], rc[1], rc[2], 160), width=S(3))
+
+    # Rank · Title
     clean_cur = clean_rank_name(current_rank_raw)
-    draw.text((col_name, 100), clean_cur, font=f_title, fill=(*rc, 255))
-    try:
-        rank_w = draw.textlength(clean_cur, font=f_title)
-    except:
-        rank_w = len(clean_cur) * 14
-    draw.text((col_name + rank_w + 10, 104), "·", font=f_value, fill=LABEL)
-    draw.text((col_name + rank_w + 26, 100), p_title, font=f_title, fill=WHITE)
+    draw.text((col_name, S(100)), clean_cur, font=f_title, fill=(rc[0], rc[1], rc[2], 255))
+    rank_w = text_width(draw, clean_cur, f_title)
+    draw.text((col_name + rank_w + S(10), S(102)), "·", font=f_value, fill=MUTED)
+    draw.text((col_name + rank_w + S(26), S(100)), p_title or "", font=f_title, fill=WHITE)
 
-    # --- DIVIDER ---
-    draw.line([(col_name, 140), (W - 30, 140)], fill=DIM, width=1)
+    # Divider
+    draw.line([(col_name, S(140)), (W - right_pad, S(140))], fill=DIM, width=S(2))
 
-    # --- RATING ---
-    draw.text((col_name, 150), "RATING", font=f_label, fill=LABEL)
-    draw.text((col_name, 174), str(pts), font=f_pts, fill=(*rc, 255))
+    # Rating
+    draw.text((col_name, S(150)), "RATING", font=f_label, fill=MUTED)
+    draw.text((col_name, S(174)), str(pts), font=f_pts, fill=(rc[0], rc[1], rc[2], 255))
 
-    # --- RECORD ---
+    # Record + WR
     total = wins + losses
     wr = round((wins / total) * 100) if total > 0 else 0
-    draw.text((col_stats, 150), "RECORD", font=f_label, fill=LABEL)
-    draw.text((col_stats, 174), f"{wins}W – {losses}L", font=f_value, fill=WHITE)
-    draw.text((col_stats, 204), f"{wr}% win rate", font=f_prog, fill=LABEL)
+    draw.text((col_stats, S(150)), "RECORD", font=f_label, fill=MUTED)
+    draw.text((col_stats, S(174)), f"{wins}W – {losses}L", font=f_value, fill=WHITE)
+    draw.text((col_stats, S(204)), f"{wr}% win rate", font=f_prog, fill=MUTED)
 
-    # --- STREAK ---
-    streak_col = (*rc, 255) if streak >= 3 else WHITE
-    draw.text((col_stats, 252), "STREAK", font=f_label, fill=LABEL)
-    streak_label = f"{streak} Wins  🔥" if streak >= 3 else f"{streak} Wins"
-    draw.text((col_stats, 276), streak_label, font=f_value, fill=streak_col)
+    # Streak
+    streak_col = (rc[0], rc[1], rc[2], 255) if streak >= 3 else WHITE
+    draw.text((col_stats, S(252)), "STREAK", font=f_label, fill=MUTED)
+    streak_label = f"{streak} Wins 🔥" if streak >= 3 else f"{streak} Wins"
+    draw.text((col_stats, S(276)), streak_label, font=f_value, fill=streak_col)
 
-    # --- DIVIDER ---
-    draw.line([(col_name, 325), (W - 30, 325)], fill=DIM, width=1)
+    # Divider
+    draw.line([(col_name, S(325)), (W - right_pad, S(325))], fill=DIM, width=S(2))
 
-    # --- SIGNATURE MOVE ---
-    draw.text((col_name, 334), "SIGNATURE MOVE", font=f_label, fill=LABEL)
-    draw.text((col_name, 358), p_move.upper(), font=f_move, fill=WHITE)
+    # Signature move
+    draw.text((col_name, S(334)), "SIGNATURE MOVE", font=f_label, fill=MUTED)
+    draw.text((col_name, S(358)), move_text, font=f_move, fill=WHITE)
 
-    # --- PROGRESS BAR ---
+    # Progress bar
     bar_x = col_name
-    bar_y = 422
-    badge_slot = 52
-    bar_w = W - col_name - 30 - badge_slot - 10
-    bar_h = 8
+    bar_y = S(422)
+    badge_slot = S(52)
+    bar_w = (W - col_name - right_pad - badge_slot - S(10))
+    bar_h = S(10)
 
     if next_rank_raw:
         clean_next = clean_rank_name(next_rank_raw)
-        draw.text((bar_x, bar_y - 18), f"{int(pct*100)}% to {clean_next}",
-                  font=f_prog, fill=LABEL)
+        draw.text((bar_x, bar_y - S(22)), f"{int(pct * 100)}% to {clean_next}", font=f_prog, fill=MUTED)
     else:
-        draw.text((bar_x, bar_y - 18), "MAX RANK REACHED",
-                  font=f_prog, fill=(*rc, 255))
+        draw.text((bar_x, bar_y - S(22)), "MAX RANK REACHED", font=f_prog, fill=(rc[0], rc[1], rc[2], 255))
 
-    draw.rectangle([(bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h)], fill=(30, 30, 35))
-    fill_w = int(bar_w * min(pct, 1.0))
+    draw.rounded_rectangle((bar_x, bar_y, bar_x + bar_w, bar_y + bar_h), radius=S(6), fill=(28, 28, 34, 255))
+    fill_w = int(bar_w * max(0.0, min(float(pct), 1.0)))
     if fill_w > 0:
-        draw.rectangle([(bar_x, bar_y), (bar_x + fill_w, bar_y + bar_h)], fill=(*rc, 255))
-
-    gx = bar_x + fill_w
-    for gi in range(10, 0, -1):
-        ga = int(50 * (gi / 10) ** 2)
-        draw.ellipse([(gx - gi, bar_y - gi//2), (gx + gi, bar_y + bar_h + gi//2)],
-                     fill=(*rc, ga))
+        draw.rounded_rectangle((bar_x, bar_y, bar_x + fill_w, bar_y + bar_h), radius=S(6), fill=(rc[0], rc[1], rc[2], 255))
 
     if next_rank_raw:
-        next_badge = get_rank_badge(next_rank_raw, size=badge_slot - 4)
+        next_badge = get_rank_badge(next_rank_raw, size=badge_slot - S(4))
         if next_badge:
-            card.paste(next_badge,
-                       (bar_x + bar_w + 12, bar_y + bar_h // 2 - (badge_slot - 4) // 2),
-                       next_badge)
+            card.paste(next_badge, (bar_x + bar_w + S(12), bar_y + bar_h // 2 - (badge_slot - S(4)) // 2), next_badge)
+
+    # Downscale to final size
+    final = card.resize((W // SCALE, H // SCALE), Image.Resampling.LANCZOS)
 
     buf = io.BytesIO()
-    card.save(buf, 'PNG')
+    final.save(buf, "PNG", optimize=True)
     buf.seek(0)
     return buf
-                  
