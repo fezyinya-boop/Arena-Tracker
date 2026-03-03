@@ -8,6 +8,13 @@ import re
 from functools import lru_cache
 from typing import Optional, Tuple
 
+def center_crop_square(img: Image.Image) -> Image.Image:
+    w, h = img.size
+    side = min(w, h)
+    left = (w - side) // 2
+    top = (h - side) // 2
+    return img.crop((left, top, left + side, top + side))
+
 RGBA = Tuple[int, int, int, int]
 RGB = Tuple[int, int, int]
 
