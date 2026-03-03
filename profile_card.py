@@ -307,7 +307,7 @@ def make_profile_card(
     f_name = fit_font(draw, name_text, "Orbitron-VariableFont_wght.ttf", max_w=col_right - col_left, start_size=S(46), min_size=S(28))
     f_big  = load_font("Michroma-Regular.ttf", S(76))
     f_h2   = load_font("DejaVuSans-Bold.ttf", S(24))
-    f_lab  = load_font("DejaVuSans-Bold.ttf", S(18))
+    f_lab  = load_font("Orbitron-VariableFont_wght.ttf", S(16))
     f_val  = load_font("DejaVuSans-Bold.ttf", S(24))
     f_small= load_font("DejaVuSans-Bold.ttf", S(14))
     f_move = fit_font(draw, move_text, "DejaVuSans-Bold.ttf", max_w=col_right - col_left, start_size=S(28), min_size=S(16))
