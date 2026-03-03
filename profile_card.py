@@ -11,6 +11,8 @@ from typing import Optional, Tuple
 RGBA = Tuple[int, int, int, int]
 RGB = Tuple[int, int, int]
 
+HEADER = (185, 185, 200, 255)
+
 # ----------------------------
 # Paths
 # ----------------------------
