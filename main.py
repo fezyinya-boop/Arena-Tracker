@@ -492,7 +492,7 @@ async def intro(ctx):
         description=(
             "The definitive home for online Grand Archive play. Be a sweat and "
             "climb the tiers, or sling a rouge deck for fun, its up to you.\n\n"
-            "This server is powered by a custom **Arena Tracker Agent** "
+            "This server is powered by a custom **Arena Guide Agent** "
             "that monitors every match, calculates Elo (RP), and tracks the global meta. "
             "Automated Tournaments, Cash Prizes, and more."
         ),
