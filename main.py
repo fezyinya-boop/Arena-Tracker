@@ -14,6 +14,7 @@ from tabulate import tabulate
 TOKEN = os.environ["DISCORD_TOKEN"]
 LEADERBOARD_CHANNEL_ID = int(os.environ['LEADERBOARD_CHANNEL_ID'])
 MOD_ROLE_ID = 1477213439586996285 # <--- Ensure this is your Role ID
+GUILD_ID = int(os.getenv("GUILD_ID", 0))
 
 # --- Railway-Proof Database Logic ---
 # This looks for the variable you just set in the Railway dashboard
@@ -773,18 +774,16 @@ async def on_ready():
     start_keep_alive_once()
     # Sync commands for Slash Commands/Buttons
     try:
+        try:
+    if GUILD_ID:
+        guild = discord.Object(id=GUILD_ID)
+        await bot.tree.sync(guild=guild)
+        print(f"✅ Slash commands synced instantly to guild {GUILD_ID}")
+    else:
         await bot.tree.sync()
-    except Exception as e:
-        print(f"Sync error: {e}")
-
-    print(f'Logged in as {bot.user.name}')
-    print('Status: Arena Meta Tracker is Online.')
-    
-    # Set the bot's "Watching" status
-    await bot.change_presence(activity=discord.Activity(
-        type=discord.ActivityType.watching, 
-        name="Arena Tracker is Online"
-    ))
+        print("🌍 Slash commands synced globally (may take time to appear)")
+except Exception as e:
+    print(f"Sync error: {e}")
 
 
 
