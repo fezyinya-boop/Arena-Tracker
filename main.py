@@ -769,21 +769,21 @@ async def leaderboard(ctx):
     
 @bot.event
 async def on_ready():
-    # Run the overhaul immediately on startup
     init_db()
     start_keep_alive_once()
-    # Sync commands for Slash Commands/Buttons
- try:
-    if GUILD_ID:
-       guild = discord.Object(id=GUILD_ID)
-       await bot.tree.sync(guild=guild)
-       print(f"✅ Slash commands synced instantly to guild {GUILD_ID}")
-    else:
-        await bot.tree.sync()
-        print("🌍 Slash commands synced globally (may take time to appear)")
- except Exception as e:
-    print(f"Sync error: {e}")
 
+    try:
+        if GUILD_ID:
+            guild = discord.Object(id=GUILD_ID)
+            await bot.tree.sync(guild=guild)
+            print(f"✅ Slash commands synced instantly to guild {GUILD_ID}")
+        else:
+            await bot.tree.sync()
+            print("🌍 Slash commands synced globally (may take time to appear)")
+    except Exception as e:
+        print(f"Sync error: {e}")
+
+    print(f'Logged in as {bot.user.name}')
 
 
 @bot.command()
