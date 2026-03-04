@@ -1946,18 +1946,59 @@ async def ga_get_by_slug(session, slug: str):
             return None
         return await r.json()
 
+
+
 def ga_card_image_url(card: dict) -> str | None:
-    # Defensive: API fields can vary by card/edition
-    editions = card.get("editions") or []
+    # 1) Direct URL fields (some endpoints return these)
+    for k in ("image_url", "imageUrl", "image", "art", "art_url", "card_image"):
+        v = card.get(k)
+        if isinstance(v, str) and v.startswith("http"):
+            return v
+
+    # 2) editions[0] variants
+    editions = card.get("editions")
     if isinstance(editions, list) and editions:
         ed0 = editions[0] or {}
-        img = ed0.get("image") or ed0.get("image_filename") or ed0.get("filename")
-        if img:
-            return f"{GATCG_API_BASE}/cards/images/{img}"
-    img = card.get("image") or card.get("image_filename") or card.get("filename")
-    if img:
-        return f"{GATCG_API_BASE}/cards/images/{img}"
+
+        # Sometimes it's already a full URL
+        for k in ("image_url", "imageUrl", "image", "art_url"):
+            v = ed0.get(k)
+            if isinstance(v, str) and v.startswith("http"):
+                return v
+
+        # Sometimes it's a filename we must pass to /cards/images/{file}
+        for k in ("image_filename", "filename", "file", "imageFile"):
+            v = ed0.get(k)
+            if isinstance(v, str) and v:
+                return f"{GATCG_API_BASE}/cards/images/{v}"
+
+        # Sometimes nested "images" dict
+        imgs = ed0.get("images")
+        if isinstance(imgs, dict):
+            for kk in ("large", "normal", "small", "png"):
+                v = imgs.get(kk)
+                if isinstance(v, str) and v.startswith("http"):
+                    return v
+
+    # 3) card-level images dict
+    imgs = card.get("images")
+    if isinstance(imgs, dict):
+        for kk in ("large", "normal", "small", "png"):
+            v = imgs.get(kk)
+            if isinstance(v, str) and v.startswith("http"):
+                return v
+
+    # 4) card-level filename fallback
+    for k in ("image_filename", "filename", "file"):
+        v = card.get(k)
+        if isinstance(v, str) and v:
+            return f"{GATCG_API_BASE}/cards/images/{v}"
+
     return None
+
+
+
+
 
 def build_ga_embed(card: dict) -> discord.Embed:
     name = card.get("name", "Unknown Card")
