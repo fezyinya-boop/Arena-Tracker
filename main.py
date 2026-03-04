@@ -1656,7 +1656,7 @@ def start_keep_alive_once():
 # --- 5. Main Execution Block ---
 if __name__ == "__main__":
     init_db()      # Initialize your SQLite tables
-    keep_alive()   # Start the website thread
+    start_keep_alive_once()   # Start the website thread
 
 # --- Slash Command Wrappers ---
 # These provide /match, /duel, etc. while keeping the existing !commands for backwards compatibility.
