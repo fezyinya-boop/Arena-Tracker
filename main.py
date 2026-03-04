@@ -838,124 +838,6 @@ async def setprofile(ctx, field: str, *, value: str):
     
     await ctx.send(f"✅ Your **{field}** has been updated to: `{value}`")
 
-@bot.command(name="card")
-async def card_command(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    
-
-    data = get_or_create_user(member.id, member.display_name)
-    pts = data[2]
-
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute("SELECT title, signature_move, embed_color FROM profiles WHERE user_id = ?", (str(member.id),))
-    bio = c.fetchone() or ("Aspirant", "None", None)
-    conn.close()
-    p_title, p_move, p_color = bio
-
-    r_info = get_rank_info(pts)
-    next_rank = next((r for r in reversed(RANKS) if r['min'] > pts), None)
-
-    if next_rank:
-        total_needed = next_rank['min'] - r_info['min']
-        current_progress = pts - r_info['min']
-        pct = max(0.0, min(current_progress / total_needed, 1.0))
-        next_rank_raw = next_rank['name']
-    else:
-        pct = 1.0
-        next_rank_raw = None
-
-    try:
-        hex_color = p_color if p_color else hex(r_info["color"])[2:].zfill(6)
-        rank_color = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-    except:
-        rank_color = (230, 160, 30)
-
-    try:
-        avatar_img = await fetch_avatar(member.display_avatar.url)
-    except:
-        avatar_img = None
-
-    try:
-        async with ctx.typing():
-            buf = await asyncio.to_thread(
-                make_profile_card,
-                display_name=member.display_name,
-                p_title=p_title,
-                p_move=p_move,
-                pts=pts,
-                wins=data[3],
-                losses=data[4],
-                streak=data[5],
-                pct=pct,
-                current_rank_raw=r_info['name'],
-                next_rank_raw=next_rank_raw,
-                rank_color=rank_color,
-                avatar_img=avatar_img,
-            )
-        await ctx.send(file=discord.File(buf, filename='profile.png'))
-    except Exception as e:
-        await ctx.send(f"❌ Failed to generate profile card: `{e}`")
-
-
-    
-
-    
-
-@bot.command()
-async def profile(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    
-    data = get_or_create_user(member.id, member.display_name)
-    pts = data[2]
-
-    conn = get_conn()
-    c = conn.cursor()
-    # Added cashtag to the SELECT to match the 4 variables below
-    c.execute("SELECT title, signature_move, embed_color, cashtag FROM profiles WHERE user_id = ?", (str(member.id),))
-    bio = c.fetchone() or ("Aspirant", "None", None, "Not Linked")
-    conn.close()
-    
-    # Now this matches the 4 columns selected above
-    p_title, p_move, p_color, p_cashtag = bio
-
-    r_info = get_rank_info(pts)
-    rank_emoji = r_info['emoji']
-
-    next_rank = next((r for r in reversed(RANKS) if r['min'] > pts), None)
-
-    if next_rank:
-        next_emoji = next_rank['emoji']
-        total_needed = next_rank['min'] - r_info['min']
-        current_progress = pts - r_info['min']
-        percent_int = min(max(int((current_progress / total_needed) * 10), 0), 10)
-        bar = "▰" * percent_int + "▱" * (10 - percent_int)
-        prog_display = f"{bar} {int((current_progress / total_needed) * 100)}% to {next_emoji}"
-    else:
-        prog_display = "▰▰▰▰▰▰▰▰▰▰ **MAX RANK REACHED**"
-
-    try:
-        color_value = int(p_color, 16) if p_color else r_info["color"]
-    except:
-        color_value = r_info["color"]
-
-    embed = discord.Embed(title=f"{rank_emoji} {member.display_name}", color=color_value)
-    embed.add_field(name="📜 Title", value=f"*{p_title}*", inline=True)
-    embed.add_field(name="✨ Signature Move", value=f"**{p_move}**", inline=True)
-
-    total_games = data[3] + data[4]
-    wr = round((data[3] / total_games) * 100) if total_games > 0 else 0
-    
-    embed.add_field(name="🏆 Rating", value=f"`{pts} RP`", inline=True)
-    embed.add_field(name="⚔️ Record", value=f"{data[3]}W - {data[4]}L ({wr}%)", inline=True)
-    embed.add_field(name="🔥 Streak", value=f"{data[5]} Win Streak", inline=True)
-    embed.add_field(name="🚀 Rank Progress", value=prog_display, inline=False)
-    
-    # Note: $Cashtag is NOT added to this embed to keep it private as requested.
-    
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="Archive Arena | Season 1")
-    await ctx.send(embed=embed)
 
 
 
@@ -2036,5 +1918,69 @@ async def clear_slash(interaction: discord.Interaction, amount: int = 100):
     await interaction.response.defer(ephemeral=True)
     deleted = await interaction.channel.purge(limit=amount)
     await interaction.followup.send(f"✅ Cleared `{len(deleted)}` messages.", ephemeral=True)
+
+
+@bot.tree.command(name="profile", description="View a player's Archive Arena profile")
+async def profile(interaction: discord.Interaction, member: discord.Member = None):
+
+    member = member or interaction.user
+
+    data = get_or_create_user(member.id, member.display_name)
+    pts = data[2]
+
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT title, signature_move, embed_color FROM profiles WHERE user_id = ?", (str(member.id),))
+    bio = c.fetchone() or ("Aspirant", "None", None)
+    conn.close()
+
+    p_title, p_move, p_color = bio
+
+    r_info = get_rank_info(pts)
+    next_rank = next((r for r in reversed(RANKS) if r['min'] > pts), None)
+
+    if next_rank:
+        total_needed = next_rank['min'] - r_info['min']
+        current_progress = pts - r_info['min']
+        pct = max(0.0, min(current_progress / total_needed, 1.0))
+        next_rank_raw = next_rank['name']
+    else:
+        pct = 1.0
+        next_rank_raw = None
+
+    try:
+        hex_color = p_color if p_color else hex(r_info["color"])[2:].zfill(6)
+        rank_color = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    except:
+        rank_color = (230, 160, 30)
+
+    try:
+        avatar_img = await fetch_avatar(member.display_avatar.url)
+    except:
+        avatar_img = None
+
+    try:
+        await interaction.response.defer()
+
+        buf = await asyncio.to_thread(
+            make_profile_card,
+            display_name=member.display_name,
+            p_title=p_title,
+            p_move=p_move,
+            pts=pts,
+            wins=data[3],
+            losses=data[4],
+            streak=data[5],
+            pct=pct,
+            current_rank_raw=r_info['name'],
+            next_rank_raw=next_rank_raw,
+            rank_color=rank_color,
+            avatar_img=avatar_img,
+        )
+
+        await interaction.followup.send(file=discord.File(buf, filename='profile.png'))
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to generate profile card: `{e}`")
 
 bot.run(TOKEN)
