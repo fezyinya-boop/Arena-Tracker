@@ -767,8 +767,10 @@ async def leaderboard(ctx):
     await ctx.send("✅ Leaderboard refreshed!")
     
     
+    
 @bot.event
 async def on_ready():
+    print(f"GUILD_ID: {GUILD_ID}, type: {type(GUILD_ID)}")
     cmds = bot.tree.get_commands()
     print(f"Commands in tree: {[c.name for c in cmds]}")
     init_db()
@@ -777,6 +779,7 @@ async def on_ready():
     try:
         if GUILD_ID:
             guild = discord.Object(id=GUILD_ID)
+            bot.tree.clear_commands(guild=guild)
             await bot.tree.sync(guild=guild)
             print(f"✅ Slash commands synced instantly to guild {GUILD_ID}")
         else:
