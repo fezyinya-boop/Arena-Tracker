@@ -2057,64 +2057,52 @@ async def card_name_autocomplete(interaction: discord.Interaction, current: str)
     return choices
 
 # ---- /card command ----
-@bot.tree.command(name="card", description="Look up a Grand Archive card (autocomplete).")
-@app_commands.describe(card="Start typing a card name…")
-@app_commands.autocomplete(card=card_name_autocomplete)
+@bot.tree.command(name="card", description="Look up a Grand Archive card")
 async def card_slash(interaction: discord.Interaction, card: str):
-    """
-    If user picks from autocomplete, `card` is a slug.
-    If user types a raw name and hits enter, we fall back to autocomplete and pick top hit.
-    """
+
     await interaction.response.defer(thinking=True)
-    
-async with aiohttp.ClientSession() as session:
-    slug = (card or "").strip()
 
-    full = await ga_get_by_slug(session, slug)
+    async with aiohttp.ClientSession() as session:
 
-    if not full:
-        hits = await ga_autocomplete(session, slug)
-        if not hits:
-            return await interaction.followup.send(f"❌ No card found for **{card}**.")
+        slug = (card or "").strip()
 
-        slug2 = hits[0].get("slug")
-        if not slug2:
-            return await interaction.followup.send(f"❌ No card found for **{card}**.")
+        full = await ga_get_by_slug(session, slug)
 
-        full = await ga_get_by_slug(session, slug2)
+        if not full:
+            hits = await ga_autocomplete(session, slug)
 
-    if not full:
-        return await interaction.followup.send(f"❌ No card found for **{card}**.")
+            if not hits:
+                await interaction.followup.send(f"❌ No card found for **{card}**.")
+                return
 
-    # ---- DEBUG ----
-    img = ga_card_image_url(full)
+            slug2 = hits[0].get("slug")
 
-    print("SLUG:", full.get("slug"))
-    print(
-        "HAS EDITIONS:",
-        isinstance(full.get("editions"), list),
-        "LEN:",
-        (len(full.get("editions")) if isinstance(full.get("editions"), list) else None),
-    )
+            if not slug2:
+                await interaction.followup.send(f"❌ No card found for **{card}**.")
+                return
 
-    print(
-        "ED0 KEYS:",
-        list(
-            (full.get("editions")[0] if isinstance(full.get("editions"), list) and full.get("editions") else {}).keys()
-        ),
-    )
+            full = await ga_get_by_slug(session, slug2)
 
-    print("IMG URL:", img)
+        if not full:
+            await interaction.followup.send(f"❌ No card found for **{card}**.")
+            return
 
-    if img:
-        async with session.get(img, timeout=10) as r:
-            print("IMG STATUS:", r.status)
-            print("IMG CONTENT-TYPE:", r.headers.get("Content-Type"))
-            chunk = await r.content.read(32)
-            print("IMG FIRST BYTES:", chunk)
+        img = ga_card_image_url(full)
 
-    await interaction.followup.send(embed=build_ga_embed(full))
-    
+        print("SLUG:", full.get("slug"))
+        print("IMG URL:", img)
+
+        if img:
+            try:
+                async with session.get(img, timeout=10) as r:
+                    print("IMG STATUS:", r.status)
+                    print("IMG CONTENT-TYPE:", r.headers.get("Content-Type"))
+            except Exception as e:
+                print("IMG FETCH ERROR:", e)
+
+        embed = build_ga_embed(full)
+
+    await interaction.followup.send(embed=embed)    
 
 
 
