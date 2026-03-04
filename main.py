@@ -2067,7 +2067,7 @@ async def card_slash(interaction: discord.Interaction, card: str):
     """
     await interaction.response.defer(thinking=True)
 
-async with aiohttp.ClientSession() as session:
+  async with aiohttp.ClientSession() as session:
     slug = (card or "").strip()
 
     full = await ga_get_by_slug(session, slug)
