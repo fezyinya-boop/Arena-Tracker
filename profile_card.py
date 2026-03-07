@@ -349,7 +349,7 @@ def make_profile_card(
     card.paste(banner, (0, 0), banner)
 
     # Main panel
-    panel_y = banner_h - S(55)
+    panel_y = banner_h - S(70)
     panel_x1 = S(28)
     panel_x2 = W - S(26)
     panel_y2 = H - S(24)
@@ -370,7 +370,7 @@ def make_profile_card(
     accent = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ad = ImageDraw.Draw(accent)
     ad.rounded_rectangle(
-        (panel_x1 + S(14), panel_y + S(14), panel_x2 - S(14), panel_y + S(74)),
+        (panel_x1 + S(14), panel_y + S(9), panel_x2 - S(14), panel_y + S(74)),
         radius=S(22),
         fill=(255, 255, 255, 8),
     )
@@ -443,7 +443,7 @@ def make_profile_card(
     total = wins + losses
     wr = round((wins / total) * 100) if total > 0 else 0
     left_x = col_left
-    right_x = col_left + int((col_right - col_left) * 0.62)
+    right_x = col_left + int((col_right - col_left) * 0.70)
 
     top_header_y = panel_y + S(26)
     rating_label_y = top_header_y + S(30)
