@@ -350,7 +350,7 @@ def make_profile_card(
 
     # Main panel
     panel_y = banner_h - S(55)
-    panel_x1 = S(260)
+    panel_x1 = S(28)
     panel_x2 = W - S(26)
     panel_y2 = H - S(24)
     panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -362,13 +362,7 @@ def make_profile_card(
         outline=PANEL_LINE,
         width=S(2),
     )
-    pd.rounded_rectangle(
-        (S(28), panel_y + S(1), panel_x1 - S(24), panel_y2),
-        radius=S(28),
-        fill=(12, 12, 16, 214),
-        outline=PANEL_LINE,
-        width=S(2),
-    )
+    
     card = Image.alpha_composite(card, panel)
     draw = ImageDraw.Draw(card)
 
@@ -417,8 +411,6 @@ def make_profile_card(
     # Typography / layout anchors
     col_left = panel_x1 + S(28)
     col_right = panel_x2 - S(26)
-    left_rail_x1 = S(28)
-    left_rail_x2 = panel_x1 - S(24)
     name_text = (display_name or "PLAYER").upper()
 
     f_name = fit_font(draw, name_text, "RussoOne-Regular.ttf", max_w=S(205), start_size=S(34), min_size=S(20))
@@ -442,7 +434,7 @@ def make_profile_card(
     total = wins + losses
     wr = round((wins / total) * 100) if total > 0 else 0
     left_x = col_left
-    right_x = col_left + int((col_right - col_left) * 0.71)
+    right_x = col_left + int((col_right - col_left) * 0.62)
 
     top_header_y = panel_y + S(26)
     rating_label_y = top_header_y + S(30)
