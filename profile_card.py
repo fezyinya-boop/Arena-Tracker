@@ -332,7 +332,7 @@ def make_profile_card(
 
             if os.path.basename(bg_path) == "archive_banner.png":
                 bg = center_crop_to_fill(bg, W, banner_h)
-                bg = bg.crop((0, int(banner_h*0.08), W, banner_h + int(banner_h*0.08))).resize((W, banner_h), Image.Resampling.LANCZOS)
+                bg = bg.crop((0, int(banner_h*0.07), W, banner_h + int(banner_h*0.08))).resize((W, banner_h), Image.Resampling.LANCZOS)
                 banner = bg
             else:
                 banner = apply_anime_arena_background(banner, bg, focus_right=True)
@@ -437,7 +437,7 @@ def make_profile_card(
     col_right = panel_x2 - S(26)
     name_text = (display_name or "PLAYER").upper()
 
-    f_name = fit_font(draw, name_text, "RussoOne-Regular.ttf", max_w=S(300), start_size=S(34), min_size=S(20))
+    f_name = fit_font(draw, name_text, "RussoOne-Regular.ttf", max_w=S(420), start_size=S(42), min_size=S(20))
     f_label = load_font("Inter-VariableFont_opsz,wght.ttf", S(22))
     f_small = load_font("Inter-VariableFont_opsz,wght.ttf", S(15))
     f_value = load_font("Orbitron-VariableFont_wght.ttf", S(30))
@@ -454,7 +454,7 @@ def make_profile_card(
     name_bbox = draw.textbbox((name_x, name_y), name_text, font=f_name, stroke_width=S(2))
     # Calculate actual rendered width including tracking gaps
     tracked_name_w = text_width(draw, name_text, f_name) + S(9) * (len(name_text) - 1)
-    badge = get_rank_badge(current_rank_raw, size=S(38))
+    badge = get_rank_badge(current_rank_raw, size=S(47))
     if badge:
         badge_y = name_y + (name_bbox[3] - name_bbox[1]) // 2 - badge.size[1] // 2
         badge_x = name_x + tracked_name_w + S(14)
