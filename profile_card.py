@@ -306,7 +306,7 @@ def make_profile_card(
     MUTED: RGBA = (145, 148, 160, 255)
     SUB: RGBA = (170, 173, 184, 255)
     GOLD: RGBA = (255, 214, 96, 255)
-    PANEL_FILL: RGBA = (8, 8, 12, 228)
+    PANEL_FILL: RGBA = (8, 8, 12, 255)
     PANEL_LINE: RGBA = (255, 255, 255, 22)
     STROKE: RGBA = (0, 0, 0, 185)
 
@@ -349,7 +349,7 @@ def make_profile_card(
     card.paste(banner, (0, 0), banner)
 
     # Main panel
-    panel_y = banner_h - S(70)
+    panel_y = banner_h - S(80)
     panel_x1 = S(28)
     panel_x2 = W - S(26)
     panel_y2 = H - S(24)
@@ -369,11 +369,6 @@ def make_profile_card(
     # Subtle interior accent for depth
     accent = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ad = ImageDraw.Draw(accent)
-    ad.rounded_rectangle(
-        (panel_x1 + S(14), panel_y + S(9), panel_x2 - S(14), panel_y + S(74)),
-        radius=S(22),
-        fill=(255, 255, 255, 8),
-    )
     accent = accent.filter(ImageFilter.GaussianBlur(radius=S(2)))
     card = Image.alpha_composite(card, accent)
     draw = ImageDraw.Draw(card)
@@ -442,8 +437,8 @@ def make_profile_card(
     # Stat grid
     total = wins + losses
     wr = round((wins / total) * 100) if total > 0 else 0
-    left_x = col_left
-    right_x = col_left + int((col_right - col_left) * 0.70)
+    left_x = col_left + S(30)
+    right_x = col_left + int((col_right - col_left) * 0.90)
 
     top_header_y = panel_y + S(26)
     rating_label_y = top_header_y + S(30)
