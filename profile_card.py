@@ -375,7 +375,7 @@ def make_profile_card(
 
     # Avatar block
     av_size = S(174)
-    av_x = S(50)
+    av_x = S(70)
     av_y = panel_y + S(8)
     if avatar_img is None:
         avatar_img = Image.new("RGBA", (av_size, av_size), (28, 28, 34, 255))
@@ -416,7 +416,7 @@ def make_profile_card(
 
     # Identity under avatar (name + rank badge). Title/bio removed.
     identity_y = av_y + av_size + S(14)
-    name_x = av_x + S(4)
+    name_x = av_x + S(20)
     draw_tracked(
         draw,
         (name_x, identity_y),
