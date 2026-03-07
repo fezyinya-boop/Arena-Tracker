@@ -167,7 +167,7 @@ def center_crop_square(img: Image.Image) -> Image.Image:
     w, h = img.size
     side = min(w, h)
     left = (w - side) // 2
-    top = (h - side) // 2
+    topd = (h - side) // 2
     return img.crop((left, top, left + side, top + side))
 
 def center_crop_to_fill(img: Image.Image, target_w: int, target_h: int) -> Image.Image:
@@ -349,7 +349,7 @@ def make_profile_card(
     card.paste(banner, (0, 0), banner)
 
     # Main panel
-    panel_y = banner_h - S(28)
+    panel_y = banner_h - S(40)
     panel_x1 = S(260)
     panel_x2 = W - S(26)
     panel_y2 = H - S(24)
@@ -363,7 +363,7 @@ def make_profile_card(
         width=S(2),
     )
     pd.rounded_rectangle(
-        (S(28), panel_y + S(10), panel_x1 - S(24), panel_y2),
+        (S(28), panel_y + S(5), panel_x1 - S(24), panel_y2),
         radius=S(28),
         fill=(12, 12, 16, 214),
         outline=PANEL_LINE,
