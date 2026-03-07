@@ -167,7 +167,7 @@ def center_crop_square(img: Image.Image) -> Image.Image:
     w, h = img.size
     side = min(w, h)
     left = (w - side) // 2
-    topd = (h - side) // 2
+    top = (h - side) // 2
     return img.crop((left, top, left + side, top + side))
 
 def center_crop_to_fill(img: Image.Image, target_w: int, target_h: int) -> Image.Image:
