@@ -170,6 +170,24 @@ def center_crop_square(img: Image.Image) -> Image.Image:
     top = (h - side) // 2
     return img.crop((left, top, left + side, top + side))
 
+def center_crop_to_fill(img: Image.Image, target_w: int, target_h: int) -> Image.Image:
+    w, h = img.size
+    src_ratio = w / h
+    dst_ratio = target_w / target_h
+
+    if src_ratio > dst_ratio:
+        # image too wide
+        new_w = int(h * dst_ratio)
+        left = (w - new_w) // 2
+        img = img.crop((left, 0, left + new_w, h))
+    else:
+        # image too tall
+        new_h = int(w / dst_ratio)
+        top = (h - new_h) // 2
+        img = img.crop((0, top, w, top + new_h))
+
+    return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
 
 def soft_circle_mask(size: int, feather: int = 4) -> Image.Image:
     m = Image.new("L", (size, size), 0)
@@ -298,26 +316,32 @@ def make_profile_card(
     # Top cinematic banner
     banner_h = S(205)
     banner = Image.new("RGBA", (W, banner_h), (6, 6, 10, 255))
+
     bg_candidates = [
         os.path.join(ASSETS_DIR, "archive_banner.png"),
         os.path.join(ASSETS_DIR, "arena_bg.png"),
     ]
     bg_path = next((p for p in bg_candidates if os.path.exists(p)), bg_candidates[-1])
+
+    print("CHOSEN BG PATH:", bg_path)
+    print("ARCHIVE EXISTS:", os.path.exists(os.path.join(ASSETS_DIR, "archive_banner.png")))
+
     if os.path.exists(bg_path):
         try:
             bg = Image.open(bg_path).convert("RGBA")
+
             if os.path.basename(bg_path) == "archive_banner.png":
                 bg = center_crop_to_fill(bg, W, banner_h)
-                bg = bg.filter(ImageFilter.GaussianBlur(radius=S(2)))
                 banner = bg
             else:
                 banner = apply_anime_arena_background(banner, bg, focus_right=True)
+
         except Exception as e:
             print(f"Background overlay error: {e}")
 
     fade = Image.new("L", (W, banner_h), 0)
     fd = ImageDraw.Draw(fade)
-    fd.rectangle((0, 0, W, banner_h), fill=185)
+    fd.rectangle((0, 0, W, banner_h), fill=120)
     fade = fade.filter(ImageFilter.GaussianBlur(radius=S(18)))
     fade_rgba = Image.new("RGBA", (W, banner_h), (0, 0, 0, 255))
     fade_rgba.putalpha(fade)
