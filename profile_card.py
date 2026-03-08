@@ -355,6 +355,34 @@ def apply_anime_arena_background(
     bloom = ImageEnhance.Brightness(out).enhance(1.15).filter(ImageFilter.GaussianBlur(radius=6))
     return ImageChops.screen(out, bloom)
 
+    def apply_carbon_fiber(base: Image.Image, p_x1: int, p_y1: int, p_x2: int, p_y2: int, radius: int, scale_fn):
+    W, H = base.size
+
+      t_size = scale_fn(14)
+      tile = Image.new("RGBA", (t_size, t_size), (0, 0, 0, 0))
+      td = ImageDraw.Draw(tile)
+
+      highlight_col = (255, 255, 255, 40)
+      td.line((0, 0, t_size // 2, t_size // 2), fill=highlight_col, width=1)
+
+      pattern_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+      for y in range(p_y1, p_y2, t_size):
+        offset = (t_size // 2) if ((y // t_size) % 2) == 1 else 0
+        for x in range(p_x1 - t_size, p_x2, t_size):
+            pattern_layer.paste(tile, (x + offset, y))
+
+    mask = Image.new("L", (W, H), 0)
+    md = ImageDraw.Draw(mask)
+    md.rounded_rectangle((p_x1, p_y1, p_x2, p_y2), radius=radius, fill=255)
+
+    pattern_layer.putalpha(mask)
+    return Image.alpha_composite(base, pattern_layer)
+
+
+def make_profile_card(...):  # starts here, unchanged
+
+
+
 
 # ----------------------------
 # Main card generator
@@ -504,38 +532,6 @@ def make_profile_card(
         gd.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(rc[0], rc[1], rc[2], a))
     card = Image.alpha_composite(card, glow)
     draw = ImageDraw.Draw(card)
-
-
-    def apply_carbon_fiber(base: Image.Image, p_x1: int, p_y1: int, p_x2: int, p_y2: int, radius: int, scale_fn):
-         W, H = base.size
-    
-         t_size = scale_fn(14)
-         tile = Image.new("RGBA", (t_size, t_size), (0, 0, 0, 0))
-         td = ImageDraw.Draw(tile)
-
-         highlight_col = (255, 255, 255, 40)  # Bug 3 fix: raised from 10 → 40
-         td.line((0, 0, t_size // 2, t_size // 2), fill=highlight_col, width=1)
-    
-         pattern_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-         for y in range(p_y1, p_y2, t_size):
-           offset = (t_size // 2) if ((y // t_size) % 2) == 1 else 0
-           for x in range(p_x1 - t_size, p_x2, t_size):
-             pattern_layer.paste(tile, (x + offset, y))
-
-    mask = Image.new("L", (W, H), 0)
-    md = ImageDraw.Draw(mask)
-    md.rounded_rectangle((p_x1, p_y1, p_x2, p_y2), radius=radius, fill=255)
-
-    pattern_layer.putalpha(mask)  # Bug 2 fix: actually apply the mask
-    return Image.alpha_composite(base, pattern_layer)
-    # Create a rounded rectangle mask to keep the texture inside the panel
-    mask = Image.new("L", (W, H), 0)
-    md = ImageDraw.Draw(mask)
-    md.rounded_rectangle((p_x1, p_y1, p_x2, p_y2), radius=radius, fill=255)
-
-    # Composite the pattern onto the base image
-    return Image.alpha_composite(base, pattern_layer)
-    
     
 
     mask = soft_circle_mask(av_size, feather=S(2))
