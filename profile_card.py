@@ -548,7 +548,7 @@ def make_profile_card(
     border_overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     bd = ImageDraw.Draw(border_overlay)
 
-    inset = S(2)
+    inset = S(1)
 
     # Outer gold frame
     bd.rounded_rectangle(
