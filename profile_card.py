@@ -550,6 +550,12 @@ def make_profile_card(
 
     inset = S(0)
 
+    # Fill corners solid black so rounded rect doesn't leave transparent gaps
+    bd.rectangle((0, 0, W, S(24)), fill=(0, 0, 0, 255))  # top strip
+    bd.rectangle((0, H - S(24), W, H), fill=(0, 0, 0, 255))  # bottom strip
+    bd.rectangle((0, 0, S(24), H), fill=(0, 0, 0, 255))  # left strip
+    bd.rectangle((W - S(24), 0, W, H), fill=(0, 0, 0, 255))  # right strip
+
     # Outer gold frame
     bd.rounded_rectangle(
         (inset, inset, W - inset, H - inset),
