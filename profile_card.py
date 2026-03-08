@@ -576,11 +576,7 @@ def make_profile_card(
     # Outer wide soft rim - more passes, higher opacity
     for offset in range(S(22), 0, -S(2)):
         a = int(110 * (1 - offset / S(22)) ** 1.4)
-        rl.ellipse(
-            (av_x - offset, av_y - offset,
-             av_x + av_size + offset, av_y + av_size + offset),
-            outline=(rc[0], rc[1], rc[2], a), width=S(2),
-        )
+        
     rim_light = rim_light.filter(ImageFilter.GaussianBlur(radius=S(6)))
     card = Image.alpha_composite(card, rim_light)
     draw = ImageDraw.Draw(card)
