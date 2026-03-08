@@ -669,10 +669,10 @@ def make_profile_card(
 
     # Shrink font until tracked width fits
     f_name_size = S(58)
-    f_name = load_font("Cinzel-Bold.ttf", f_name_size)
+    f_name = load_font("RussoOne-Regular.ttf", f_name_size)
     while f_name_size > S(26) and name_rendered_w(name_text, f_name) > name_max_w:
         f_name_size -= 1
-        f_name = load_font("Cinzel-Bold.ttf", f_name_size)
+        f_name = load_font("RussoOne-Regular.ttf", f_name_size)
 
     # If even min size still overflows, truncate character by character
     if name_rendered_w(name_text, f_name) > name_max_w:
@@ -687,17 +687,16 @@ def make_profile_card(
     f_big = fit_font(draw, f"{pts}", "Orbitron-VariableFont_wght.ttf", max_w=S(340), start_size=S(70), min_size=S(42))
     f_rp = load_font("Orbitron-VariableFont_wght.ttf", int(f_big.size * 0.55))
 
-    # Username - brushed silver metallic with increased tracking
     tracked_name_w = draw_tracked_name(
-        card, name_text, (name_x, name_y - S(5)), f_name, name_tracking,
-        fill=(236, 240, 247, 255),
-        stroke_fill=(26, 30, 40, 210),
-        stroke_width=S(2),
-        glow_fill=(190, 210, 255, 28),
-        underline_fill=(255, 200, 90, 0),
-        underline_offset=S(52),
-        underline_width=0,
-    )
+      card, name_text, (name_x, name_y - S(5)), f_name, name_tracking,
+      fill=(245, 247, 252, 255),
+      stroke_fill=(0, 0, 0, 0),
+      stroke_width=0,
+      glow_fill=(190, 210, 255, 10),
+      underline_fill=(255, 200, 90, 0),
+      underline_offset=S(52),
+      underline_width=0,
+    ) 
 
     name_draw_y = name_y - S(5)  # actual Y the text is drawn at
     name_bbox = draw.textbbox((name_x, name_draw_y), name_text, font=f_name, stroke_width=S(2))
