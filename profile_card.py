@@ -172,16 +172,17 @@ def center_crop_to_fill(img, target_w, target_h):
         img = img.crop((0, top, w, top + new_h))
     return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
+
 def draw_tracked_name(
     base_img,
     text_value,
     pos,
     font,
     tracking,
-    fill=(236, 236, 240, 255),
-    stroke_fill=(0, 0, 0, 190),
-    stroke_width=3,
-    glow_fill=(255, 220, 170, 46),
+    fill=(245, 247, 252, 255),
+    stroke_fill=(0, 0, 0, 0),
+    stroke_width=0,
+    glow_fill=(190, 210, 255, 10),
     underline_fill=(255, 200, 90, 0),
     underline_offset=58,
     underline_width=2,
@@ -201,49 +202,15 @@ def draw_tracked_name(
     d = ImageDraw.Draw(base_img)
     cx = x
 
-    # Tight crisp shadow instead of a foggy embossed look
-    shadow_fill = (0, 0, 0, 115)
-    shadow_stroke = (0, 0, 0, 70)
-    body_fill = fill
-    body_stroke = stroke_fill
-
     for i, ch in enumerate(chars):
-        # sharp physical drop shadow
-        d.text(
-            (cx + 2, y + 3),
-            ch,
-            font=font,
-            fill=shadow_fill,
-            stroke_width=max(1, stroke_width - 1),
-            stroke_fill=shadow_stroke,
-        )
-
-        # darker lower body to help the metallic effect read
-        d.text(
-            (cx, y + 1),
-            ch,
-            font=font,
-            fill=(190, 196, 208, 255),
-            stroke_width=max(1, stroke_width),
-            stroke_fill=body_stroke,
-        )
-
-        # bright main body
         d.text(
             (cx, y),
             ch,
             font=font,
-            fill=body_fill,
-            stroke_width=max(1, stroke_width),
-            stroke_fill=body_stroke,
+            fill=fill,
+            stroke_width=stroke_width,
+            stroke_fill=stroke_fill,
         )
-
-        # crisp top-edge metallic highlight
-        d.text((cx, y - 1), ch, font=font, fill=(255, 255, 255, 200))
-
-        # tiny cool highlight to keep the silver finish lively
-        d.text((cx + 1, y), ch, font=font, fill=(210, 225, 255, 34))
-
         cx += widths[i] + (tracking if i < len(chars) - 1 else 0)
 
     ul_y = y + underline_offset
