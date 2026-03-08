@@ -545,15 +545,15 @@ def make_profile_card(
     draw = ImageDraw.Draw(card)
 
     # --- Inside make_profile_card, locate the Avatar block ---
-cx = av_x + av_size // 2
-cy = av_y + av_size // 2
+    cx = av_x + av_size // 2
+    cy = av_y + av_size // 2
 
 # ... (after the 'glow' composite logic) ...
 
 # 1. Draw the "Gear" style teeth behind the ring
 # Use a slightly darker gold for the teeth to provide depth
-gear_gold = (210, 160, 60, 255) 
-draw_gear_background(
+   gear_gold = (210, 160, 60, 255) 
+   draw_gear_background(
     draw, 
     center=(cx, cy), 
     inner_radius=av_size // 2 + S(2), 
@@ -561,15 +561,15 @@ draw_gear_background(
     teeth_count=12, 
     color=gear_gold,
     offset_deg=15  # Change this to 'rotate' the gear in the static image
-)
+    )
 
 # 2. Add a circular shadow just under the teeth for extra "pop"
-draw.ellipse(
-    (av_x - S(6), av_y - S(6), av_x + av_size + S(6), av_y + av_size + S(6)),
-    outline=(0, 0, 0, 80),
-    width=S(2)
-)
-
+    draw.ellipse(
+     (av_x - S(6), av_y - S(6), av_x + av_size + S(6), av_y + av_size + S(6)),
+     outline=(0, 0, 0, 80),
+     width=S(2)
+    )
+ 
 # ... (Continue with the existing 'main gold ring' and 'avatar paste' logic) ...
 
 
