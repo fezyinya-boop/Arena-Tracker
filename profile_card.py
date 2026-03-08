@@ -182,10 +182,10 @@ def draw_tracked_name(
     fill=(245, 247, 252, 255),
     stroke_fill=(0, 0, 0, 0),
     stroke_width=0,
-    glow_fill=(190, 210, 255, 10),
+    glow_fill=(0, 0, 0, 0),
     underline_fill=(255, 200, 90, 0),
     underline_offset=58,
-    underline_width=2,
+    underline_width=0,
 ):
     x, y = pos
     chars = list(text_value)
@@ -203,15 +203,20 @@ def draw_tracked_name(
     cx = x
 
     for i, ch in enumerate(chars):
-        # Tiny premium finish without returning to an embossed look
-        d.text((cx + 1, y + 2), ch, font=font, fill=(0, 0, 0, 70))
-        d.text((cx, y), ch, font=font, fill=fill, stroke_width=stroke_width, stroke_fill=stroke_fill)
-        d.text((cx, y - 1), ch, font=font, fill=(255, 255, 255, 26))
-        cx += widths[i] + (tracking if i < len(chars) - 1 else 0)
+        # tiny soft shadow only
+        d.text((cx + 1, y + 1), ch, font=font, fill=(0, 0, 0, 70))
 
-    ul_y = y + underline_offset
-    if underline_width and len(underline_fill) >= 4 and underline_fill[3] > 0:
-        d.line((x, ul_y, x + total_w, ul_y), fill=underline_fill, width=underline_width)
+        # main bright text
+        d.text(
+            (cx, y),
+            ch,
+            font=font,
+            fill=fill,
+            stroke_width=stroke_width,
+            stroke_fill=stroke_fill,
+        )
+
+        cx += widths[i] + (tracking if i < len(chars) - 1 else 0)
 
     return int(total_w)
 
