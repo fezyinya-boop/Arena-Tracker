@@ -172,8 +172,7 @@ def center_crop_to_fill(img, target_w, target_h):
         img = img.crop((0, top, w, top + new_h))
     return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-
- def draw_tracked_name(
+def draw_tracked_name(
     base_img,
     text_value,
     pos,
