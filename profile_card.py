@@ -82,7 +82,35 @@ def clamp_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, 
     return (t + ell) if t else ell
 
 
+def apply_carbon_fiber(base: Image.Image, p_x1: int, p_y1: int, p_x2: int, p_y2: int, radius: int, scale_fn):
+    W, H = base.size
+    
+    # Create a small 'unit' of the carbon weave
+    t_size = scale_fn(14)
+    tile = Image.new("RGBA", (t_size, t_size), (0, 0, 0, 0))
+    td = ImageDraw.Draw(tile)
+    
+    # Drawing a subtle diagonal highlight to catch the "light"
+    # This creates the 3D hexagonal effect
+    highlight_col = (255, 255, 255, 10) # Very low opacity white
+    td.line((0, 0, t_size // 2, t_size // 2), fill=highlight_col, width=1)
+    
+    # Create a full-screen pattern layer
+    pattern_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    for y in range(p_y1, p_y2, t_size):
+        # Stagger every other row by half a tile to create the hex grid
+        offset = (t_size // 2) if ((y // t_size) % 2) == 1 else 0
+        for x in range(p_x1 - t_size, p_x2, t_size):
+            pattern_layer.paste(tile, (x + offset, y))
 
+    # Create a rounded rectangle mask to keep the texture inside the panel
+    mask = Image.new("L", (W, H), 0)
+    md = ImageDraw.Draw(mask)
+    md.rounded_rectangle((p_x1, p_y1, p_x2, p_y2), radius=radius, fill=255)
+
+    # Composite the pattern onto the base image
+    return Image.alpha_composite(base, pattern_layer)
+               
 
 
                          
@@ -449,6 +477,18 @@ def make_profile_card(
         outline=PANEL_LINE,
         width=S(2),
     )
+
+    
+# 2. ADD THIS LINE: Apply the carbon fiber texture over the panel
+    card = apply_carbon_fiber(card, panel_x1, panel_y, panel_x2, panel_y2, radius=S(28), scale_fn=S)
+
+# 3. Re-initialize the draw object (required after alpha_composite)
+    draw = ImageDraw.Draw(card)
+
+# Continue drawing the rest of the UI (Avatar, Name, RP, etc.)
+
+
+    
 
     # Gold divider line under banner
     draw.line((0, panel_y, W, panel_y), fill=(rc[0], rc[1], rc[2], 220), width=S(5))
