@@ -507,20 +507,20 @@ def make_profile_card(
 
 
     def apply_carbon_fiber(base: Image.Image, p_x1: int, p_y1: int, p_x2: int, p_y2: int, radius: int, scale_fn):
-    W, H = base.size
+         W, H = base.size
     
-    t_size = scale_fn(14)
-    tile = Image.new("RGBA", (t_size, t_size), (0, 0, 0, 0))
-    td = ImageDraw.Draw(tile)
+         t_size = scale_fn(14)
+         tile = Image.new("RGBA", (t_size, t_size), (0, 0, 0, 0))
+         td = ImageDraw.Draw(tile)
+
+         highlight_col = (255, 255, 255, 40)  # Bug 3 fix: raised from 10 → 40
+         td.line((0, 0, t_size // 2, t_size // 2), fill=highlight_col, width=1)
     
-    highlight_col = (255, 255, 255, 40)  # Bug 3 fix: raised from 10 → 40
-    td.line((0, 0, t_size // 2, t_size // 2), fill=highlight_col, width=1)
-    
-    pattern_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    for y in range(p_y1, p_y2, t_size):
-        offset = (t_size // 2) if ((y // t_size) % 2) == 1 else 0
-        for x in range(p_x1 - t_size, p_x2, t_size):
-            pattern_layer.paste(tile, (x + offset, y))
+         pattern_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+         for y in range(p_y1, p_y2, t_size):
+           offset = (t_size // 2) if ((y // t_size) % 2) == 1 else 0
+           for x in range(p_x1 - t_size, p_x2, t_size):
+             pattern_layer.paste(tile, (x + offset, y))
 
     mask = Image.new("L", (W, H), 0)
     md = ImageDraw.Draw(mask)
