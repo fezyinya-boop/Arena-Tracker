@@ -507,7 +507,7 @@ def make_profile_card(
         sv.line((i, 0, i, banner_h), fill=(0, 0, 0, alpha))
         sv.line((W - 1 - i, 0, W - 1 - i, banner_h), fill=(0, 0, 0, alpha))
     banner = Image.alpha_composite(banner, side_vig)
-    card.paste(banner, (0, 0))
+    card.paste(banner, (0, S(8)))
 
     # -------------------------------------------------------
     # Main panel
