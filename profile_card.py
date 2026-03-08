@@ -202,37 +202,7 @@ def center_crop_to_fill(img: Image.Image, target_w: int, target_h: int) -> Image
 
     return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-def draw_tracked_name(base_img, text_value, pos, font, tracking, fill=(236, 236, 240, 255),
-                      stroke_fill=(0, 0, 0, 190), stroke_width=3,
-                      glow_fill=(255, 220, 170, 46), underline_fill=(255, 200, 90, 0),
-                      underline_offset=58, underline_width=2):
-    x, y = pos
-    chars = list(text_value)
-    widths = []
-    total_w = 0
-    for i, ch in enumerate(chars):
-        w = font.getlength(ch)
-        widths.append(w)
-        total_w += w
-        if i < len(chars) - 1:
-            total_w += tracking
 
-    
-        # soft metallic highlight
-        d.text(
-            (cx, y - 1),
-            ch,
-            font=font,
-            fill=(255, 255, 255, 28),
-        )
-        cx += widths[i] + (tracking if i < len(chars) - 1 else 0)
-
-    # subtle gold underline
-    ul_y = y + underline_offset
-    if underline_width and len(underline_fill) >= 4 and underline_fill[3] > 0:
-        d.line((x, ul_y, x + total_w, ul_y), fill=underline_fill, width=underline_width)
-
-    return int(total_w)
 
 
 
