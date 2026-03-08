@@ -173,11 +173,20 @@ def center_crop_to_fill(img, target_w, target_h):
     return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
 
- def draw_tracked_name(base_img, text_value, pos, font, tracking,
-                      fill=(236, 236, 240, 255),
-                      stroke_fill=(0, 0, 0, 190), stroke_width=3,
-                      glow_fill=(255, 220, 170, 46), underline_fill=(255, 200, 90, 0),
-                      underline_offset=58, underline_width=2):
+ def draw_tracked_name(
+    base_img,
+    text_value,
+    pos,
+    font,
+    tracking,
+    fill=(236, 236, 240, 255),
+    stroke_fill=(0, 0, 0, 190),
+    stroke_width=3,
+    glow_fill=(255, 220, 170, 46),
+    underline_fill=(255, 200, 90, 0),
+    underline_offset=58,
+    underline_width=2,
+):
     x, y = pos
     chars = list(text_value)
     widths = []
@@ -194,10 +203,8 @@ def center_crop_to_fill(img, target_w, target_h):
     cx = x
 
     for i, ch in enumerate(chars):
-        # very light shadow only
         d.text((cx + 2, y + 2), ch, font=font, fill=(0, 0, 0, 55))
 
-        # main bright silver body
         d.text(
             (cx, y),
             ch,
@@ -207,7 +214,6 @@ def center_crop_to_fill(img, target_w, target_h):
             stroke_fill=(90, 96, 110, 110),
         )
 
-        # metallic top highlight
         d.text((cx, y - 1), ch, font=font, fill=(255, 255, 255, 170))
 
         cx += widths[i] + (tracking if i < len(chars) - 1 else 0)
