@@ -556,7 +556,7 @@ def make_profile_card(
         (inset, inset, W - inset, H - inset),
         radius=S(24),
         outline=(255, 200, 90, 255),
-        width=S(1),
+        width=S(2),
     )
 
 # Fill top border solid - overrides the transparent rounded corners at top
@@ -580,11 +580,6 @@ def make_profile_card(
         width=S(3),
     )
 
-    # Solid top gold band
-    bd.rectangle(
-        (inset + S(12), inset, W - inset - S(12), inset + S(6)),
-        fill=(255, 200, 90, 255),
-    )
 
     # Bright top highlight
     bd.line(
@@ -593,17 +588,6 @@ def make_profile_card(
         width=S(2),
                                    )
 
-    # Opaque black cap under the top border so it doesn't look see-through
-    bd.rectangle(
-        (inset + S(8), inset, W - inset - S(8), inset + S(1)),
-        fill=(0, 0, 0, 255),
-    )
-
-    # Solid top gold band
-    bd.rectangle(
-        (inset + S(10), inset, W - inset - S(10), inset + S(6)),
-        fill=(255, 200, 90, 255),
-    )
 
     # Bright top highlight
     bd.line(
