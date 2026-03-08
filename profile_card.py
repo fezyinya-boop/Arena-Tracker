@@ -577,9 +577,6 @@ def make_profile_card(
     for offset in range(S(22), 0, -S(2)):
         a = int(110 * (1 - offset / S(22)) ** 1.4)
         
-    rim_light = rim_light.filter(ImageFilter.GaussianBlur(radius=S(6)))
-    card = Image.alpha_composite(card, rim_light)
-    draw = ImageDraw.Draw(card)
 
     # Main gold ring
     draw.ellipse(
