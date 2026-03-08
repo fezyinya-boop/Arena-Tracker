@@ -276,15 +276,22 @@ def soft_circle_mask(size: int, feather: int = 4) -> Image.Image:
 
 
 async def fetch_avatar(url: str) -> Optional[Image.Image]:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(str(url), timeout=aiohttp.ClientTimeout(total=6)) as resp:
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(str(url), timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 if resp.status == 200:
                     data = await resp.read()
+                    # Using BytesIO to ensure the image is fully loaded into memory
                     return Image.open(io.BytesIO(data)).convert("RGBA")
+                else:
+                    print(f"[HTTP {resp.status}] Failed to fetch avatar from: {url}")
     except Exception as e:
-        print(f"Avatar fetch error: {e}")
+        print(f"Avatar fetch exception: {e}")
     return None
+
 
 
 # ----------------------------
