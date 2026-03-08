@@ -252,15 +252,7 @@ def draw_tracked_name(base_img, text_value, pos, font, tracking, fill=(236, 236,
             font=font,
             fill=(0, 0, 0, 110),
         )
-        # main silver text
-        d.text(
-            (cx, y),
-            ch,
-            font=font,
-            fill=(245, 245, 248, 255),
-            stroke_width=2,
-            stroke_fill=(0, 0, 0, 170),
-        )
+        
         # soft metallic highlight
         d.text(
             (cx, y - 1),
@@ -552,15 +544,15 @@ def make_profile_card(
 
 # 1. Draw the "Gear" style teeth behind the ring
 # Use a slightly darker gold for the teeth to provide depth
-   gear_gold = (210, 160, 60, 255) 
-   draw_gear_background(
-    draw, 
-    center=(cx, cy), 
-    inner_radius=av_size // 2 + S(2), 
-    outer_radius=av_size // 2 + S(12), 
-    teeth_count=12, 
-    color=gear_gold,
-    offset_deg=15  # Change this to 'rotate' the gear in the static image
+    gear_gold = (210, 160, 60, 255) 
+    draw_gear_background(
+     draw, 
+     center=(cx, cy), 
+     inner_radius=av_size // 2 + S(2), 
+     outer_radius=av_size // 2 + S(12), 
+     teeth_count=12, 
+     color=gear_gold,
+     offset_deg=15  # Change this to 'rotate' the gear in the static image
     )
 
 # 2. Add a circular shadow just under the teeth for extra "pop"
