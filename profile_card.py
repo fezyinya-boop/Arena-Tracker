@@ -573,6 +573,19 @@ def make_profile_card(
         width=S(3),
     )
 
+    # Solid top gold band
+    bd.rectangle(
+        (inset + S(12), inset, W - inset - S(12), inset + S(6)),
+        fill=(255, 200, 90, 255),
+    )
+
+    # Bright top highlight
+    bd.line(
+        (inset + S(16), inset + S(1), W - inset - S(16), inset + S(1)),
+        fill=(255, 245, 200, 180),
+        width=S(2),
+                                   )
+
     card = Image.alpha_composite(card, border_overlay)
     
     # bottom edge vignette
