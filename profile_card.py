@@ -570,7 +570,7 @@ def make_profile_card(
        fill=(255,200,90,255)
     )
 
-   bd.rounded_rectangle(
+    bd.rounded_rectangle(
        (inset + S(3), inset + S(3), W - inset - S(3), H - inset - S(3)),
        radius=S(22),
        outline=(0,0,0,200),
