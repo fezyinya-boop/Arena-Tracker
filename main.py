@@ -2267,9 +2267,10 @@ async def profile(interaction: discord.Interaction, member: discord.Member = Non
     except:
         rank_color = (230, 160, 30)
 
-    try:
         avatar_img = await fetch_avatar(member.display_avatar.url)
-    except:
+        print(f"Avatar fetched: {avatar_img}")  # add this
+    except Exception as e:
+        print(f"Avatar fetch failed: {e}")  # change bare except to this
         avatar_img = None
 
     try:
