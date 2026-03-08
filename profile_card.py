@@ -347,7 +347,7 @@ def make_profile_card(
 
     banner = Image.alpha_composite(banner, side_vig)
     card.paste(banner, (0, 0))
-    card.paste(veil_rgba, (0, banner_h - S(20)), veil_rgba)
+    
 
     # Main panel
     panel_y = banner_h - S(98)
