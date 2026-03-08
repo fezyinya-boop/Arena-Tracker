@@ -543,7 +543,7 @@ def make_profile_card(
     # -------------------------------------------------------
     # Tapered metallic divider (replaces flat gold line)
     # -------------------------------------------------------
-    card = draw_tapered_divider(card, 0, W, panel_y, rc, height=S(4))
+    card = draw_tapered_divider(card, 0, W, panel_y, (255, 200, 90), height=S(4))
     draw = ImageDraw.Draw(card)
     # Subtle white shimmer line on top edge
     draw.line((0, panel_y + S(1), W, panel_y + S(1)), fill=(255, 255, 255, 25), width=S(1))
