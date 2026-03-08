@@ -353,7 +353,7 @@ def make_profile_card(
     veil = Image.new("L", (W, veil_h), 0)
     vd = ImageDraw.Draw(veil)
 
-for y in range(veil_h):
+    for y in range(veil_h):
     alpha = int(180 * (y / veil_h))
     vd.line((0, y, W, y), fill=alpha)
 
@@ -550,4 +550,4 @@ for y in range(veil_h):
     buf = io.BytesIO()
     final.save(buf, "PNG", optimize=True)
     buf.seek(0)
-    return buf
+ return buf
