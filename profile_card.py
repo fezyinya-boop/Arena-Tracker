@@ -556,7 +556,7 @@ def make_profile_card(
         (inset, inset, W - inset, H - inset),
         radius=S(24),
         outline=(255, 200, 90, 255),
-        width=S(6),
+        width=S(5),
     )
 
 # Fill top border solid - overrides the transparent rounded corners at top
@@ -595,7 +595,7 @@ def make_profile_card(
 
     # Opaque black cap under the top border so it doesn't look see-through
     bd.rectangle(
-        (inset + S(8), inset, W - inset - S(8), inset + S(10)),
+        (inset + S(8), inset, W - inset - S(8), inset + S(4)),
         fill=(0, 0, 0, 255),
     )
 
