@@ -173,52 +173,55 @@ def center_crop_to_fill(img, target_w, target_h):
     return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
 
+
 def draw_tracked_name(
     base_img,
     text_value,
     pos,
     font,
     tracking,
+    rc, # ADDED: Pass the rank color here
     fill=(245, 247, 252, 255),
-    stroke_fill=(0, 0, 0, 0),
-    stroke_width=0,
-    glow_fill=(0, 0, 0, 0),
-    underline_fill=(255, 200, 90, 0),
-    underline_offset=58,
-    underline_width=0,
+    # ... other existing arguments ...
 ):
-    x, y = pos
-    chars = list(text_value)
-    widths = []
-    total_w = 0
-
-    for i, ch in enumerate(chars):
-        w = font.getlength(ch)
-        widths.append(w)
-        total_w += w
-        if i < len(chars) - 1:
-            total_w += tracking
-
+    # [Keep all your existing width/tracking calculations exactly as they are]
+    # ...
+    
     d = ImageDraw.Draw(base_img)
     cx = x
-
+    
+    # Create the gradient colors based on rank_color (rc)
+    top_col = tuple(min(255, c + 70) for c in rc) # Brighter
+    bot_col = tuple(max(0, c - 30) for c in rc)    # Deeper
+    
     for i, ch in enumerate(chars):
-        # tiny soft shadow only
-        d.text((cx + 1, y + 1), ch, font=font, fill=(0, 0, 0, 70))
+        # 1. Keep your tiny soft shadow exactly where it is
+        d.text((cx + 1, y + 1), ch, font=font, fill=(0, 0, 0, 85))
 
-        # main bright text
-        d.text(
-            (cx, y),
-            ch,
-            font=font,
-            fill=fill,
-            stroke_width=stroke_width,
-            stroke_fill=stroke_fill,
-        )
+        # 2. Draw the character with a vertical gradient
+        # We create a small temporary mask for just this one character
+        char_w = int(font.getlength(ch)) + 2
+        char_h = int(font.size * 1.2)
+        char_mask = Image.new("L", (char_w, char_h), 0)
+        md = ImageDraw.Draw(char_mask)
+        md.text((0, 0), ch, font=font, fill=255)
+        
+        # Create the character gradient
+        char_grad = Image.new("RGBA", (char_w, char_h))
+        cd = ImageDraw.Draw(char_grad)
+        for gy in range(char_h):
+            # Interpolate between top_col and bot_col
+            pct = gy / char_h
+            curr_c = tuple(int(top_col[j] + (bot_col[j] - top_col[j]) * pct) for j in range(3))
+            cd.line([(0, gy), (char_w, gy)], fill=curr_c + (255,))
+            
+        # Paste character onto base_img using your existing cx/y coordinates
+        base_img.paste(char_grad, (int(cx), int(y)), mask=char_mask)
 
         cx += widths[i] + (tracking if i < len(chars) - 1 else 0)
 
     return int(total_w)
+
 
 
 def normalize_avatar_input(avatar_img):
@@ -276,6 +279,10 @@ def get_rank_badge(rank_name_raw: str, size: int = 60) -> Optional[Image.Image]:
         return Image.open(path).convert("RGBA").resize((size, size), Image.Resampling.LANCZOS)
     except Exception:
         return None
+
+
+
+ 
 
 
 # ----------------------------
