@@ -552,7 +552,7 @@ def make_profile_card(
 
     rc = rank_color
     WHITE: RGBA = (242, 242, 245, 255)
-    LABEL: RGBA = (242, 242, 245, 255)    # cream labels  # gold labels  # solid white labels
+    LABEL: RGBA = (255, 200, 90, 255)      # cream labels  # gold labels  # solid white labels
     PANEL_FILL: RGBA = (8, 8, 12, 255)
     PANEL_LINE: RGBA = (255, 255, 255, 22)
 
@@ -734,11 +734,11 @@ def make_profile_card(
         while len(t) > 1 and name_rendered_w(t + "…", f_name) > name_max_w:
             t = t[:-1]
         name_text = t + "…"
-    f_label = load_font("Orbitron-VariableFont_wght.ttf", S(22))
+    f_label = load_cinzel_font(S(22))
     f_small = load_font("Inter-VariableFont_opsz,wght.ttf", S(15))
-    f_value = load_cinzel_font(S(30))
+    f_value = load_font("Orbitron-VariableFont_wght.ttf", S(30))
     # f_big sized for the NUMBER only, f_rp is ~55% for the "RP" suffix
-    f_big = fit_font(draw, f"{pts}", "Orbitron-VariableFont_wght.ttf", max_w=S(340), start_size=S(70), min_size=S(42))
+    f_big = fit_font(draw, "{pts}", "Orbitron-VariableFont_wght.ttf", max_w=S(340), start_size=S(70), min_size=S(42))
     f_rp = load_font("Orbitron-VariableFont_wght.ttf", int(f_big.size * 0.55))
 
     # Tiered fallback: prestige ranks (Diamond, Platinum, Gold) keep their rank color
