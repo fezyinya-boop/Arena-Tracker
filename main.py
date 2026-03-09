@@ -841,53 +841,6 @@ async def decklist(ctx, *, search: str = None):
     await ctx.send(embed=embed, view=view)
     
 
-
-@bot.command()
-async def meta(ctx):
-    """Shows a snapshot of recorded deck-vs-deck win rates."""
-    query = """
-    SELECT
-        p1_deck AS deck_a,
-        p2_deck AS deck_b,
-        COUNT(*) AS games,
-        SUM(CASE WHEN winner_id = p1_id THEN 1 ELSE 0 END) AS wins
-    FROM matches
-    WHERE p1_deck IS NOT NULL
-      AND p2_deck IS NOT NULL
-      AND status = 'completed'
-    GROUP BY p1_deck, p2_deck
-    ORDER BY games DESC, deck_a ASC, deck_b ASC
-    """
-
-    try:
-        with get_conn() as conn:
-            c = conn.cursor()
-            c.execute(query)
-            rows = c.fetchall()
-
-        if not rows:
-            return await ctx.send("📊 **No meta data yet.** Start settling some matches with decks locked in!")
-
-        # Build table rows
-        table_rows = []
-        for deck_a, deck_b, games, wins in rows:
-            games = int(games or 0)
-            wins = int(wins or 0)
-            wr = round((wins / games) * 100, 1) if games > 0 else 0.0
-            table_rows.append([deck_a, deck_b, games, wins, wr])
-
-        table = tabulate(
-            table_rows,
-            headers=["Deck A", "Deck B", "Games", "Wins", "WR%"],
-            tablefmt="pretty",
-            showindex=False
-        )
-
-        await ctx.send(f"📊 **CURRENT ARENA META SNAPSHOT**\n```\n{table}\n```")
-
-    except Exception as e:
-        print(f"Meta Command Error: {e}")
-        await ctx.send("❌ Error calculating meta stats. Make sure matches are being settled properly.")
 @bot.command()
 async def leaderboard(ctx):
     # This just triggers the same refresh logic manually
@@ -965,53 +918,6 @@ async def setprofile(ctx, field: str, *, value: str):
     conn.close()
     
     await ctx.send(f"✅ Your **{field}** has been updated to: `{value}`")
-
-
-
-
-    
-    
-
-
-
-
-        
-
-@bot.command()
-async def rules(ctx):
-    """Displays the official Archive Arena rules and ranking system."""
-    # Build the Rank strings dynamically from the RANKS list
-    rank_summary = ""
-    for r in RANKS:
-        rank_summary += f"• {r['name']}: {r['min']}+ RP\n"
-
-    embed = discord.Embed(
-        title="🛡️ ARCHIVE ARENA OFFICIAL RULES",
-        description=(
-            "Welcome to the Arena. To maintain a fair and competitive environment, "
-            "all players must adhere to the following guidelines:\n\n"
-            "**1. Match Reporting**\n"
-            "Both players must report the outcome immediately after a match. "
-            "Intentional false reporting will result in a rank reset or ban.\n\n"
-            "**2. Disputes**\n"
-            "If a dispute occurs, the automated system pauses. Post a screenshot of your "
-            "victory in this channel and wait for a moderator to settle it.\n\n"
-            "**3. Sportsmanship**\n"
-            "Toxic behavior, stalling, or 'counter-picking' outside of allowed "
-            "parameters is prohibited.\n\n"
-            
-        ),
-        color=0x7289da
-    )
-    
-    embed.add_field(
-        name="📊 RANKING SYSTEM",
-        value=rank_summary,
-        inline=False
-    )
-    
-    embed.set_footer(text="Play Fair, Duel Hard")
-    await ctx.send(embed=embed)
 
 
     
